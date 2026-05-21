@@ -20,6 +20,9 @@ dist/
 # Environment variables (contains secrets)
 .env
 
+# Google Cloud service account key (contains credentials)
+Project_123.json
+
 # Vector database storage
 qdrant_data/
 chromaDb/
