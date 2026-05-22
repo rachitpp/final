@@ -1,0 +1,34 @@
+===================================================
+  Virtual Environment Setup — Windows (PowerShell)
+===================================================
+
+1. Create the virtual environment
+   python -m venv venv
+
+2. Activate it
+   .\venv\Scripts\Activate.ps1
+
+   Note: If you get a script execution policy error, run this first:
+   Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+
+3. Install dependencies
+   pip install -r requirements.txt
+
+4. Deactivate when done
+   deactivate
+
+---------------------------------------------------
+  Virtual Environment Setup — macOS / Linux (bash)
+---------------------------------------------------
+
+1. Create the virtual environment
+   python3 -m venv venv
+
+2. Activate it
+   source venv/bin/activate
+
+3. Install dependencies
+   pip install -r requirements.txt
+
+4. Deactivate when done
+   deactivate

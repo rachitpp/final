@@ -45,17 +45,17 @@ class Settings:
     routing_similarity_gap: float = 0.15  # include extra PDFs within this gap of top score
 
     # --- Retrieval ---
-    vector_k: int = 8          # final chunks from vector retriever
-    vector_fetch_k: int = 40   # candidates before MMR diversification
+    vector_k: int = 12         # final chunks from vector retriever
+    vector_fetch_k: int = 50   # candidates before MMR diversification
     vector_mmr_lambda: float = 0.5  # 0=diversity, 1=relevance
-    bm25_k: int = 8
+    bm25_k: int = 12
 
     # --- Reranking + confidence filter ---
     cross_encoder_model: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
-    rerank_top_n: int = 5             # max chunks kept after rerank
+    rerank_top_n: int = 8              # max chunks kept after rerank
     # Threshold is on sigmoid(logit) so it lives in [0, 1].
     # 0.5 = "model thinks chunk is more relevant than not". Tune per corpus.
-    rerank_score_threshold: float = 0.3
+    rerank_score_threshold: float = 0.2
 
     # --- HYDE ---
     hyde_enabled: bool = True

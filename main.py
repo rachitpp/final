@@ -44,7 +44,7 @@ def main() -> None:
             for src, page, section in sources:
                 section_str = f", §{section}" if section else ""
                 print(f"  - {src}, p.{page}{section_str}")
-
+ 
 
 if __name__ == "__main__":
     main()

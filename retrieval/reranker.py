@@ -54,13 +54,13 @@ def rerank_and_filter(
     top = scored[:top_n]
     kept = [(d, s) for d, s in top if s >= threshold]
 
-    for d, s in top:
-        verdict = "KEEP" if s >= threshold else "DROP"
-        preview = d.page_content[:300].replace("\n", " ")
-        logger.info(f"  [{verdict}] score={s:.3f}  {preview!r}")
-    logger.info(
-        f"Rerank kept {len(kept)}/{len(top)} above threshold={threshold}"
-    )
+    # for d, s in top:
+    #     verdict = "KEEP" if s >= threshold else "DROP"
+    #     preview = d.page_content[:300].replace("\n", " ")
+    #     logger.info(f"  [{verdict}] score={s:.3f}  {preview!r}")
+    # logger.info(
+    #     f"Rerank kept {len(kept)}/{len(top)} above threshold={threshold}"
+    # )
 
     for d, s in kept:
         d.metadata["rerank_score"] = round(s, 4)

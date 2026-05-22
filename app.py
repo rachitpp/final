@@ -1,274 +1,406 @@
 """
 Streamlit UI for the RAG system.
-
-Wraps the existing RAGPipeline — does not modify backend logic.
 Run with:  streamlit run app.py
 """
 from dotenv import load_dotenv
 load_dotenv()
 
 import streamlit as st
-
 from pipelines.rag_pipeline import RAGPipeline
-from config.settings import settings
 
 
-# =============================================================
-# Page config — must be the first Streamlit call.
-# =============================================================
 st.set_page_config(
-    page_title="RAG System",
+    page_title="RAG Assistant",
     page_icon="◐",
     layout="centered",
     initial_sidebar_state="expanded",
 )
 
-
-# =============================================================
-# Styling — minimal CSS for typography, spacing, and polish.
-# We override only what Streamlit ships by default; we don't
-# fight the theme system, so it stays dark/light agnostic.
-# =============================================================
 CSS = """
 <style>
-  /* Tighten the default top padding so the app feels app-like, not docs-like. */
-  .block-container {
-    padding-top: 3rem;
-    padding-bottom: 6rem;
-    max-width: 760px;
+  /* ============================================================
+     Tokens — one place, used everywhere
+     ============================================================ */
+  :root {
+    --ink:        #0f1115;   /* primary text */
+    --ink-soft:   #2a2d34;   /* secondary text */
+    --ink-muted:  #6b6f78;   /* tertiary / helper */
+    --ink-faint:  #9a9ea6;   /* placeholder, eyebrow */
+
+    --paper:      #fdfcf9;   /* main background — warm off-white */
+    --paper-2:    #f4f2ec;   /* sidebar */
+    --paper-3:    #efece4;   /* hover fill */
+
+    --rule:       #e6e3da;   /* hairlines */
+    --rule-strong:#cfcbbf;
+
+    --focus:      #0f1115;   /* focus ring color */
+    --focus-halo: rgba(15, 17, 21, 0.06);
+
+    --radius-sm:  8px;
+    --radius-md:  12px;
+    --radius-lg:  16px;
+
+    --serif: "Charter", "Iowan Old Style", "Source Serif Pro",
+             Georgia, "Times New Roman", serif;
+    --sans:  -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI",
+             Roboto, Helvetica, Arial, sans-serif;
   }
 
-  /* Modern system font stack — looks native on every OS. */
-  html, body, [class*="css"] {
-    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI",
-                 Roboto, Helvetica, Arial, sans-serif;
-    -webkit-font-smoothing: antialiased;
+  /* ============================================================
+     Hide Streamlit chrome
+     ============================================================ */
+  #MainMenu, footer,
+  [data-testid="stToolbar"],
+  [data-testid="stDecoration"],
+  [data-testid="stHeader"] .stDeployButton,
+  [data-testid="stStatusWidget"] {
+    display: none !important;
   }
-
-  /* Heading rhythm. */
-  h1 { font-weight: 600; letter-spacing: -0.02em; }
-  h2, h3 { font-weight: 600; letter-spacing: -0.01em; }
-
-  /* Chat message containers — gentler spacing, softer feel. */
-  [data-testid="stChatMessage"] {
-    padding: 0.75rem 0;
-    border: none;
+  [data-testid="stHeader"] {
     background: transparent;
-  }
-  [data-testid="stChatMessageContent"] {
-    line-height: 1.7;
-    font-size: 0.97rem;
-  }
-  [data-testid="stChatMessageContent"] p { margin-bottom: 0.6rem; }
-
-  /* Chat input — slightly more breathing room. */
-  [data-testid="stChatInput"] textarea {
-    font-size: 0.97rem;
-    line-height: 1.5;
+    height: 0;
   }
 
-  /* Sidebar — quieter, more documentation-like. */
+  /* ============================================================
+     Base
+     ============================================================ */
+  .stApp { background: var(--paper); }
+
+  html, body, [class*="css"], .stMarkdown, .stMarkdown p {
+    font-family: var(--serif);
+    -webkit-font-smoothing: antialiased;
+    color: var(--ink);
+  }
+  button, input, textarea,
+  [data-testid="stChatInput"] textarea,
+  .ui-sans, .eyebrow, .muted, .sidebar-sub, .suggest-label {
+    font-family: var(--sans) !important;
+  }
+
+  .block-container {
+    padding-top: 2.5rem;
+    padding-bottom: 9rem;
+    max-width: 740px;
+  }
+
+  /* ============================================================
+     Sidebar
+     ============================================================ */
   [data-testid="stSidebar"] {
-    border-right: 1px solid rgba(128, 128, 128, 0.12);
+    background: var(--paper-2);
+    border-right: 1px solid var(--rule);
   }
   [data-testid="stSidebar"] .block-container {
-    padding-top: 2rem;
-  }
-  [data-testid="stSidebar"] h1 {
-    font-size: 1.25rem;
-    margin-bottom: 0.25rem;
-  }
-  [data-testid="stSidebar"] hr {
-    margin: 1.5rem 0;
-    border-color: rgba(128, 128, 128, 0.12);
+    padding-top: 2.5rem;
+    padding-bottom: 2rem;
   }
 
-  /* Pipeline flow display in sidebar — monospace, subtle. */
-  .pipeline-flow {
-    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
-    font-size: 0.78rem;
-    line-height: 1.9;
-    color: rgba(128, 128, 128, 0.95);
-    padding: 0.75rem 0.9rem;
-    border-radius: 8px;
-    background: rgba(128, 128, 128, 0.06);
-    border: 1px solid rgba(128, 128, 128, 0.1);
+  .sidebar-brand {
+    font-family: var(--serif);
+    font-size: 1.2rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+    margin-bottom: 0.4rem;
   }
-
-  /* Key-value config rows in the sidebar. */
-  .config-row {
-    display: flex;
-    justify-content: space-between;
+  .sidebar-sub {
     font-size: 0.82rem;
-    padding: 0.25rem 0;
-    color: rgba(128, 128, 128, 0.95);
+    color: var(--ink-muted);
+    line-height: 1.55;
+    margin-bottom: 1.5rem;
   }
-  .config-row strong {
-    color: inherit;
-    font-weight: 500;
+  .sidebar-rule {
+    height: 1px;
+    background: var(--rule);
+    margin: 0.25rem 0 1.25rem;
   }
 
-  /* Subtle muted helper text. */
+  [data-testid="stSidebar"] .stButton > button {
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--rule-strong);
+    border-radius: var(--radius-sm);
+    font-weight: 500;
+    font-size: 0.88rem;
+    padding: 0.55rem 0.9rem;
+    transition: border-color 140ms ease, background 140ms ease,
+                transform 140ms ease;
+    box-shadow: none;
+  }
+  [data-testid="stSidebar"] .stButton > button:hover {
+    border-color: var(--ink-soft);
+    background: var(--paper-3);
+    color: var(--ink);
+  }
+  [data-testid="stSidebar"] .stButton > button:focus,
+  [data-testid="stSidebar"] .stButton > button:active {
+    border-color: var(--ink) !important;
+    background: var(--paper-3) !important;
+    color: var(--ink) !important;
+    box-shadow: 0 0 0 3px var(--focus-halo) !important;
+    outline: none !important;
+  }
+
+  /* ============================================================
+     Welcome / empty state
+     ============================================================ */
+  .welcome-wrap { padding: 4.5rem 0 1.5rem; }
+
+  .eyebrow {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-bottom: 1.25rem;
+  }
+
+  .welcome-title {
+    font-family: var(--serif);
+    font-size: 2.5rem;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    line-height: 1.08;
+    color: var(--ink);
+    margin: 0 0 0.85rem;
+    text-wrap: pretty;
+  }
+
+  .welcome-sub {
+    font-family: var(--serif);
+    font-size: 1.05rem;
+    color: var(--ink-soft);
+    line-height: 1.6;
+    max-width: 30rem;
+    margin: 0 0 2.5rem;
+    text-wrap: pretty;
+  }
+
+  /* ---- Suggestions ---- */
+  .suggest-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0 0 0.6rem 0.05rem;
+  }
+
+  /* Main-area suggestion buttons — quiet, list-like with hairline */
+  .block-container .stButton > button {
+    background: transparent;
+    color: var(--ink-soft);
+    border: none;
+    border-top: 1px solid var(--rule);
+    border-radius: 0;
+    padding: 0.95rem 0.25rem;
+    font-family: var(--serif);
+    font-size: 1rem;
+    font-weight: 400;
+    text-align: left;
+    justify-content: flex-start;
+    line-height: 1.5;
+    transition: color 140ms ease, padding-left 180ms ease,
+                background 140ms ease;
+    box-shadow: none;
+  }
+  .block-container .stButton > button > div { justify-content: flex-start; }
+  .block-container .stButton > button:last-of-type {
+    border-bottom: 1px solid var(--rule);
+  }
+  .block-container .stButton > button:hover {
+    color: var(--ink);
+    background: transparent;
+    padding-left: 0.65rem;
+  }
+  .block-container .stButton > button:focus,
+  .block-container .stButton > button:active {
+    color: var(--ink) !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    outline: none !important;
+    border-color: var(--rule) !important;
+  }
+
+  /* ============================================================
+     Chat messages
+     ============================================================ */
+  [data-testid="stChatMessage"] {
+    padding: 0.85rem 0;
+    border: none;
+    background: transparent;
+    gap: 0 !important;
+    padding-left: 0 !important;
+  }
+  [data-testid="stChatMessageContent"] {
+    line-height: 1.75;
+    font-size: 1rem;
+    color: var(--ink);
+    margin-left: 0 !important;
+  }
+  [data-testid="stChatMessageContent"] p { margin-bottom: 0.6rem; color: var(--ink); }
+  [data-testid="stChatMessageContent"] strong { color: var(--ink); }
+  [data-testid="stChatMessageContent"] code {
+    background: var(--paper-3);
+    padding: 0.1rem 0.35rem;
+    border-radius: 4px;
+    font-size: 0.92em;
+  }
+
+  /* Hide default avatars — selectors cover current + older Streamlit */
+  [data-testid="stChatMessage"] [data-testid="stChatMessageAvatarUser"],
+  [data-testid="stChatMessage"] [data-testid="stChatMessageAvatarAssistant"],
+  [data-testid="stChatMessage"] [data-testid="chatAvatarIcon-user"],
+  [data-testid="stChatMessage"] [data-testid="chatAvatarIcon-assistant"],
+  [data-testid="stChatMessage"] > img:first-child,
+  [data-testid="stChatMessage"] > div:first-child:has(svg) {
+    display: none !important;
+  }
+
+  /* ============================================================
+     Chat input — kill Streamlit's red, replace with ink focus
+     ============================================================ */
+  [data-testid="stChatInput"] { background: transparent; }
+  [data-testid="stChatInput"] > div {
+    background: #ffffff !important;
+    border: 1px solid var(--rule-strong) !important;
+    border-radius: var(--radius-md) !important;
+    box-shadow: 0 1px 0 rgba(15, 17, 21, 0.02) !important;
+    transition: border-color 140ms ease, box-shadow 140ms ease;
+  }
+  [data-testid="stChatInput"] > div:hover {
+    border-color: var(--ink-soft) !important;
+  }
+  [data-testid="stChatInput"] > div:focus-within {
+    border-color: var(--focus) !important;
+    box-shadow: 0 0 0 3px var(--focus-halo) !important;
+    outline: none !important;
+  }
+  [data-testid="stChatInput"] textarea {
+    background: transparent !important;
+    color: var(--ink) !important;
+    font-size: 0.98rem !important;
+    caret-color: var(--ink);
+  }
+  [data-testid="stChatInput"] textarea::placeholder { color: var(--ink-faint) !important; }
+  [data-testid="stChatInput"] textarea:focus {
+    box-shadow: none !important;
+    outline: none !important;
+    border: none !important;
+  }
+  [data-testid="stChatInput"] button {
+    color: var(--ink) !important;
+    background: transparent !important;
+    transition: transform 140ms ease, color 140ms ease;
+  }
+  [data-testid="stChatInput"] button:hover {
+    color: #000 !important;
+    transform: translateY(-1px);
+  }
+  [data-testid="stChatInput"] button svg { fill: var(--ink); }
+
+  /* ============================================================
+     Misc
+     ============================================================ */
   .muted {
-    color: rgba(128, 128, 128, 0.85);
-    font-size: 0.85rem;
+    color: var(--ink-muted);
+    font-size: 0.84rem;
     line-height: 1.6;
   }
 
-  /* Hide the default Streamlit chrome we don't need. */
-  #MainMenu, footer { visibility: hidden; }
+  /* ============================================================
+     Responsive — collapse extra padding on small screens
+     ============================================================ */
+  @media (max-width: 640px) {
+    .block-container { padding-top: 1.5rem; padding-bottom: 7rem; }
+    .welcome-wrap { padding: 2rem 0 1rem; }
+    .welcome-title { font-size: 2rem; }
+    .welcome-sub { font-size: 1rem; }
+  }
 </style>
 """
 
+SUGGESTED_QUESTIONS = [
+    "Give me an overview of the main topics covered.",
+    "What are the key concepts I should understand?",
+    "Summarize the most important findings.",
+]
 
-# =============================================================
-# Pipeline init — cached so the heavy objects (vector store,
-# BM25 index, cross-encoder, LLM client) load exactly once.
-# =============================================================
-@st.cache_resource(show_spinner="Loading retrieval pipeline…")
+
+@st.cache_resource(show_spinner="Loading pipeline…")
 def get_pipeline() -> RAGPipeline:
     return RAGPipeline()
 
 
-# =============================================================
-# Session state — chat history for the UI layer.
-# The backend keeps its own ConversationMemory (for query
-# rewriting). They stay in sync: we clear both on New Chat.
-# =============================================================
 def init_session() -> None:
     if "messages" not in st.session_state:
         st.session_state.messages = []
+    if "pending_prompt" not in st.session_state:
+        st.session_state.pending_prompt = None
 
 
 def reset_conversation(pipeline: RAGPipeline) -> None:
-    """Wipe UI history and the backend's rewrite memory."""
     st.session_state.messages = []
+    st.session_state.pending_prompt = None
     pipeline.memory.clear()
 
 
-# =============================================================
-# Sidebar — project info, pipeline overview, config, actions.
-# =============================================================
 def render_sidebar(pipeline: RAGPipeline) -> None:
     with st.sidebar:
-        st.markdown("# RAG System")
         st.markdown(
-            "<div class='muted'>"
-            "Hybrid retrieval with HYDE, cross-encoder reranking, "
-            "and conversational query rewriting."
-            "</div>",
+            "<div class='sidebar-brand'>RAG Assistant</div>"
+            "<div class='sidebar-sub'>"
+            "Ask questions across your indexed documents."
+            "</div>"
+            "<div class='sidebar-rule'></div>",
             unsafe_allow_html=True,
         )
-
-        st.markdown("---")
-
-        # --- Pipeline flow ---
-        st.markdown("##### Retrieval pipeline")
-        st.markdown(
-            "<div class='pipeline-flow'>"
-            "1. Rewrite query<br>"
-            "2. HYDE passage<br>"
-            "3. BM25 + Vector (MMR)<br>"
-            "4. Cross-encoder rerank<br>"
-            "5. Confidence filter<br>"
-            "6. Gemini answer"
-            "</div>",
-            unsafe_allow_html=True,
-        )
-
-        st.markdown("---")
-
-        # --- Current configuration (read-only, transparent) ---
-        st.markdown("##### Configuration")
-        config_rows = [
-            ("Embedding", settings.embedding_model),
-            ("LLM", settings.llm_model),
-            ("Vector store", "Qdrant Cloud"),
-            ("Chunk size", str(settings.chunk_size)),
-            ("Vector k / fetch_k", f"{settings.vector_k} / {settings.vector_fetch_k}"),
-            ("BM25 k", str(settings.bm25_k)),
-            ("Rerank threshold", f"{settings.rerank_score_threshold}"),
-            ("HYDE", "on" if settings.hyde_enabled else "off"),
-            ("Memory window", f"{settings.history_window} turn(s)"),
-        ]
-        for label, value in config_rows:
-            st.markdown(
-                f"<div class='config-row'>"
-                f"<span>{label}</span><strong>{value}</strong>"
-                f"</div>",
-                unsafe_allow_html=True,
-            )
-
-        st.markdown("---")
-
-        # --- Actions ---
-        if st.button("New chat", use_container_width=True):
+        if st.button("New chat", use_container_width=True, type="secondary"):
             reset_conversation(pipeline)
             st.rerun()
 
-        # --- Debug (optional) ---
-        with st.expander("Debug"):
-            turns = pipeline.memory.turns()
-            st.markdown(
-                f"<div class='muted'>"
-                f"Memory: {len(turns)} turn(s) stored "
-                f"(max {settings.history_window})."
-                f"</div>",
-                unsafe_allow_html=True,
-            )
-            if turns:
-                for i, (u, a) in enumerate(turns, 1):
-                    st.markdown(
-                        f"<div class='muted'><strong>{i}. user</strong> "
-                        f"— {u[:80]}{'…' if len(u) > 80 else ''}</div>",
-                        unsafe_allow_html=True,
-                    )
+
+def render_empty_state() -> None:
+    st.markdown(
+        "<div class='welcome-wrap'>"
+        "<div class='eyebrow'>Ready when you are</div>"
+        "<div class='welcome-title'>What would you like to know?</div>"
+        "<div class='welcome-sub'>"
+        "Ask anything about your documents. Follow-up questions keep the "
+        "conversation in context."
+        "</div>"
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        "<div class='suggest-label'>Suggestions</div>",
+        unsafe_allow_html=True,
+    )
+    for q in SUGGESTED_QUESTIONS:
+        if st.button(q, use_container_width=True, key=f"sug_{q}"):
+            st.session_state.pending_prompt = q
+            st.rerun()
 
 
-# =============================================================
-# Chat rendering helpers.
-# =============================================================
 def render_history() -> None:
-    """Paint every previous turn from session_state."""
     for msg in st.session_state.messages:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
 
 
-def render_empty_state() -> None:
-    """Calm landing view when no conversation has started yet."""
-    st.markdown(
-        "<div style='padding: 3rem 0 1rem 0;'>"
-        "<h2 style='margin-bottom: 0.5rem;'>How can I help?</h2>"
-        "<p class='muted' style='margin: 0;'>"
-        "Ask a question about your indexed documents. "
-        "Follow-up questions remember the conversation context."
-        "</p>"
-        "</div>",
-        unsafe_allow_html=True,
-    )
-
-
 def handle_user_input(pipeline: RAGPipeline, prompt: str) -> None:
-    """Append user message, stream assistant reply, persist both."""
-    # 1. Persist + render the user turn.
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # 2. Stream the assistant response.
     with st.chat_message("assistant"):
-        # st.write_stream consumes the iterator and renders tokens live,
-        # returning the concatenated final string when done.
         response = st.write_stream(pipeline.stream_answer(prompt))
 
-    # 3. Persist the assistant turn for re-renders.
     st.session_state.messages.append({"role": "assistant", "content": response})
 
 
-# =============================================================
-# Main.
-# =============================================================
 def main() -> None:
     st.markdown(CSS, unsafe_allow_html=True)
     init_session()
@@ -276,13 +408,16 @@ def main() -> None:
 
     render_sidebar(pipeline)
 
-    # Empty-state vs conversation view.
     if not st.session_state.messages:
         render_empty_state()
     else:
         render_history()
 
-    # Pinned chat input (Streamlit fixes it to the bottom by default).
+    if st.session_state.pending_prompt:
+        prompt = st.session_state.pending_prompt
+        st.session_state.pending_prompt = None
+        handle_user_input(pipeline, prompt)
+
     if prompt := st.chat_input("Ask a question…"):
         handle_user_input(pipeline, prompt)
 

@@ -27,6 +27,7 @@ def summarize_documents(docs: list[Document]) -> dict[str, str]:
     Generate one plain-text summary per unique source PDF.
     Returns {filename: summary_text}.
     """
+    
     grouped: dict[str, list[str]] = defaultdict(list)
     for d in docs:
         grouped[d.metadata.get("source", "unknown")].append(d.page_content)
