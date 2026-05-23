@@ -15,7 +15,8 @@ Rules:
 - If the answer is not in the context, say:
   "I could not find the answer in the provided documents."
 - Do not hallucinate or add information not present in the context.
-- Cite relevant details where useful.
+- When citing a source, use the format (filename, p.N) — for example
+  (MachineLearning.pdf, p.29). Never reference internal chunk numbers.
 """),
     ("human", """Context:
 {context}

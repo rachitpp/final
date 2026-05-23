@@ -52,7 +52,7 @@ class Settings:
 
     # --- Reranking + confidence filter ---
     cross_encoder_model: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
-    rerank_top_n: int = 8              # max chunks kept after rerank
+    rerank_top_n: int = 12             # max chunks kept after rerank
     # Threshold is on sigmoid(logit) so it lives in [0, 1].
     # 0.5 = "model thinks chunk is more relevant than not". Tune per corpus.
     rerank_score_threshold: float = 0.2

@@ -2,8 +2,9 @@
 Streamlit UI for the RAG system.
 Run with:  streamlit run app.py
 """
+from pathlib import Path
 from dotenv import load_dotenv
-load_dotenv()
+load_dotenv(Path(__file__).parent / '.env')
 
 import streamlit as st
 from pipelines.rag_pipeline import RAGPipeline
@@ -224,22 +225,24 @@ CSS = """
   }
 
   /* ============================================================
-     Chat messages
+     Chat messages — base
      ============================================================ */
   [data-testid="stChatMessage"] {
-    padding: 0.85rem 0;
+    display: flex;
+    flex-direction: column;
+    padding: 0.6rem 0;
     border: none;
     background: transparent;
-    gap: 0 !important;
+    gap: 0.28rem;
     padding-left: 0 !important;
   }
   [data-testid="stChatMessageContent"] {
-    line-height: 1.75;
-    font-size: 1rem;
+    line-height: 1.78;
+    font-size: 1.06rem;
     color: var(--ink);
     margin-left: 0 !important;
   }
-  [data-testid="stChatMessageContent"] p { margin-bottom: 0.6rem; color: var(--ink); }
+  [data-testid="stChatMessageContent"] p { margin-bottom: 0.65rem; color: var(--ink); }
   [data-testid="stChatMessageContent"] strong { color: var(--ink); }
   [data-testid="stChatMessageContent"] code {
     background: var(--paper-3);
@@ -256,6 +259,66 @@ CSS = """
   [data-testid="stChatMessage"] > img:first-child,
   [data-testid="stChatMessage"] > div:first-child:has(svg) {
     display: none !important;
+  }
+
+  /* ============================================================
+     User message — right-aligned bubble
+     ============================================================ */
+  [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]),
+  [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) {
+    align-items: flex-end;
+    padding: 0.5rem 0 !important;
+    margin-bottom: 0.2rem;
+  }
+  [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"])::before,
+  [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"])::before {
+    content: "◉  You";
+    font-family: var(--sans);
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--ink-muted);
+  }
+  [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) [data-testid="stChatMessageContent"],
+  [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) [data-testid="stChatMessageContent"] {
+    background: var(--paper-3);
+    border-radius: var(--radius-md);
+    padding: 0.9rem 1.15rem !important;
+    width: fit-content !important;
+    max-width: 72% !important;
+    align-self: flex-end !important;
+    font-family: var(--sans) !important;
+    font-size: 1.06rem !important;
+    color: var(--ink-soft) !important;
+    line-height: 1.6 !important;
+  }
+
+  /* ============================================================
+     Assistant message — left-aligned, full-width content
+     ============================================================ */
+  [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarAssistant"]),
+  [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) {
+    align-items: flex-start;
+    padding: 0.85rem 0 0.6rem !important;
+    border-top: 1px solid var(--rule);
+    margin-top: 0.1rem;
+  }
+  [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarAssistant"])::before,
+  [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"])::before {
+    content: "◐  Assistant";
+    font-family: var(--sans);
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--ink-soft);
+  }
+  [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarAssistant"]) [data-testid="stChatMessageContent"],
+  [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) [data-testid="stChatMessageContent"] {
+    font-size: 1.06rem !important;
+    line-height: 1.78 !important;
+    max-width: 100%;
   }
 
   /* ============================================================
@@ -310,6 +373,87 @@ CSS = """
   }
 
   /* ============================================================
+     Loading state — custom, centered, matches the design system
+     ============================================================ */
+  .loader-wrap {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--paper);
+    z-index: 9999;
+    animation: loader-fade-in 240ms ease both;
+  }
+  .loader-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.1rem;
+    padding: 2rem 2.25rem;
+    max-width: 22rem;
+    text-align: center;
+  }
+  .loader-dots {
+    display: inline-flex;
+    gap: 0.45rem;
+    align-items: center;
+    height: 14px;
+    margin-bottom: 0.4rem;
+  }
+  .loader-dots span {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--ink);
+    opacity: 0.25;
+    animation: loader-bounce 1.1s ease-in-out infinite;
+  }
+  .loader-dots span:nth-child(2) { animation-delay: 0.15s; }
+  .loader-dots span:nth-child(3) { animation-delay: 0.30s; }
+
+  .loader-title {
+    font-family: var(--serif);
+    font-size: 1.35rem;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    color: var(--ink);
+    line-height: 1.2;
+  }
+  .loader-sub {
+    font-family: var(--sans);
+    font-size: 0.85rem;
+    color: var(--ink-muted);
+    line-height: 1.55;
+    max-width: 20rem;
+  }
+
+  @keyframes loader-bounce {
+    0%, 80%, 100% { opacity: 0.25; transform: translateY(0); }
+    40%           { opacity: 1;    transform: translateY(-4px); }
+  }
+  @keyframes loader-fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  /* ============================================================
+     Bottom bar — kill every possible dark wrapper Streamlit uses
+     ============================================================ */
+  [data-testid="stBottom"],
+  [data-testid="stBottom"] > div,
+  [data-testid="stBottom"] > div > div,
+  [data-testid="stBottomBlockContainer"],
+  .stChatFloatingInputContainer,
+  .stChatFloatingInputContainer > div,
+  .stChatFloatingInputContainer > div > div {
+    background: var(--paper) !important;
+    background-color: var(--paper) !important;
+    border-top: none !important;
+    box-shadow: none !important;
+  }
+
+  /* ============================================================
      Responsive — collapse extra padding on small screens
      ============================================================ */
   @media (max-width: 640px) {
@@ -328,9 +472,36 @@ SUGGESTED_QUESTIONS = [
 ]
 
 
-@st.cache_resource(show_spinner="Loading pipeline…")
-def get_pipeline() -> RAGPipeline:
+@st.cache_resource(show_spinner=False)
+def _build_pipeline() -> RAGPipeline:
     return RAGPipeline()
+
+
+def get_pipeline() -> RAGPipeline:
+    """Build the pipeline behind a custom centered loading state."""
+    # If already cached, skip the loader entirely.
+    if "_pipeline_ready" in st.session_state:
+        return _build_pipeline()
+
+    placeholder = st.empty()
+    placeholder.markdown(
+        """
+        <div class='loader-wrap'>
+          <div class='loader-card'>
+            <div class='loader-dots' aria-hidden='true'>
+              <span></span><span></span><span></span>
+            </div>
+            <div class='loader-title'>Preparing your assistant</div>
+            <div class='loader-sub'>Indexing memory and warming the retriever.</div>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    pipeline = _build_pipeline()
+    placeholder.empty()
+    st.session_state["_pipeline_ready"] = True
+    return pipeline
 
 
 def init_session() -> None:
@@ -374,14 +545,6 @@ def render_empty_state() -> None:
         unsafe_allow_html=True,
     )
 
-    st.markdown(
-        "<div class='suggest-label'>Suggestions</div>",
-        unsafe_allow_html=True,
-    )
-    for q in SUGGESTED_QUESTIONS:
-        if st.button(q, use_container_width=True, key=f"sug_{q}"):
-            st.session_state.pending_prompt = q
-            st.rerun()
 
 
 def render_history() -> None:

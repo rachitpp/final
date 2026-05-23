@@ -9,15 +9,11 @@ def format_docs(docs: list[Document]) -> str:
     is included only when the chunk carries a section title.
     """
     parts = []
-    for i, doc in enumerate(docs, 1):
+    for doc in docs:
         source = doc.metadata.get("source", "unknown")
         page = doc.metadata.get("page", "?")
-        section = doc.metadata.get("section")
-        score = doc.metadata.get("rerank_score")
-        section_str = f", §{section}" if section else ""
-        score_str = f" | score={score}" if score is not None else ""
         parts.append(
-            f"[Chunk {i} | {source}, p.{page}{section_str}{score_str}]\n"
+            f"[Source: {source}, p.{page}]\n"
             f"{doc.page_content}"
         )
     return "\n\n---\n\n".join(parts)
