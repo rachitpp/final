@@ -200,8 +200,19 @@ section.main {
      gap. A display:none iframe still loads and executes its script, so the
      observer keeps working. Scoped to height="0" so real component iframes
      are never affected. */
-[data-testid="stElementContainer"]:has(iframe[height="0"]) {
-  display: none !important;
+/* Collapse the helper's container to zero height WITHOUT display:none. A
+     display:none ancestor lets some Chromium builds throttle/skip the hidden
+     iframe's script, which silently disables Copy + the sources toggle (both
+     are wired from that script). Key off the stable title="st.iframe" rather
+     than the version-fragile height="0" attribute (Streamlit 1.57 doesn't set
+     that attribute, so the old selector matched nothing), and keep the iframe
+     in the render tree so its script always runs. */
+[data-testid="stElementContainer"]:has(> iframe[title="st.iframe"]) {
+  height: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
 }
 
 /* Soft warm glow — gives the canvas a center of gravity without clutter */
@@ -562,7 +573,7 @@ textarea,
 .sources-toggle .chev {
   font-size: 0.6rem;
   opacity: 0.7;
-  transition: transform 180ms ease;
+  transition: transform 420ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 .sources.open .sources-toggle .chev {
   transform: rotate(90deg);
@@ -571,20 +582,55 @@ textarea,
   margin: 0;
   padding: 0;
   list-style: none;
-  /* Smooth open/closed: animate max-height + opacity. Closed clips to 0;
-       open expands to a ceiling comfortably above any realistic list. */
+  /* Slow, smooth reveal. The visible motion is carried by opacity + a gentle
+       downward slide (which animate over the FULL duration regardless of the
+       list's height), while max-height just clips the layout space. Driving
+       the perceived motion this way — instead of via max-height alone — avoids
+       the old "snap open in ~100ms then animate empty space to 40rem" feel.
+       Closing reverses the same curve. */
   max-height: 0;
   opacity: 0;
+  transform: translateY(-6px);
   overflow: hidden;
   transition:
-    max-height 440ms cubic-bezier(0.4, 0, 0.2, 1),
-    opacity 380ms ease,
-    margin-top 440ms cubic-bezier(0.4, 0, 0.2, 1);
+    max-height 720ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 600ms ease,
+    transform 720ms cubic-bezier(0.16, 1, 0.3, 1),
+    margin-top 720ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 .sources.open .sources-list {
   max-height: 40rem;
   opacity: 1;
+  transform: translateY(0);
   margin-top: 0.7rem;
+}
+/* Each source line eases in just after the last, so the list unfolds as a
+     gentle cascade rather than appearing all at once. */
+.source-item {
+  opacity: 0;
+  transform: translateY(-5px);
+  transition:
+    opacity 520ms ease,
+    transform 520ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.sources.open .source-item {
+  opacity: 1;
+  transform: translateY(0);
+}
+.sources.open .source-item:nth-child(1) {
+  transition-delay: 120ms;
+}
+.sources.open .source-item:nth-child(2) {
+  transition-delay: 200ms;
+}
+.sources.open .source-item:nth-child(3) {
+  transition-delay: 280ms;
+}
+.sources.open .source-item:nth-child(4) {
+  transition-delay: 360ms;
+}
+.sources.open .source-item:nth-child(n + 5) {
+  transition-delay: 430ms;
 }
 .source-item {
   font-family: var(--sans);
@@ -1170,8 +1216,19 @@ textarea,
   [data-testid="stSidebar"] .stButton > button,
   [data-testid="stChatInput"] button,
   .jump-latest,
-  .copy-btn {
+  .copy-btn,
+  .sources-list,
+  .sources-toggle .chev,
+  .source-item {
     transition: none !important;
+  }
+  /* Reduced motion: reveal the sources instantly, no slide/stagger. */
+  .source-item {
+    transform: none !important;
+  }
+  .sources.open .source-item {
+    opacity: 1 !important;
+    transition-delay: 0ms !important;
   }
 }
 
