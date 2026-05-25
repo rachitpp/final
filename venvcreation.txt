@@ -17,6 +17,10 @@
 4. Deactivate when done
    deactivate
 
+5. Upgrade pip
+   python -m pip install --upgrade pip
+
+   
 ---------------------------------------------------
   Virtual Environment Setup — macOS / Linux (bash)
 ---------------------------------------------------

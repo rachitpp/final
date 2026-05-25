@@ -1,5 +1,9 @@
 python-dotenv>=1.0.0
 
+# UI — the app.py front-end (uses modern test-ids: stMain, stBottom,
+# stChatInput). Pin to a recent line so those selectors stay valid.
+streamlit>=1.40.0
+
 # LangChain core + classic + community
 langchain>=0.3.0
 langchain-core>=0.3.0

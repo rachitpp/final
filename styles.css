@@ -2,20 +2,26 @@
      Tokens — one place, used everywhere
      ============================================================ */
 :root {
-  --ink: #0f1115; /* primary text */
-  --ink-soft: #2a2d34; /* secondary text */
-  --ink-muted: #6b6f78; /* tertiary / helper */
-  --ink-faint: #9a9ea6; /* placeholder, eyebrow */
+  --ink: #1a1416; /* primary text — near-black, faint warm undertone */
+  --ink-soft: #3a2e30; /* secondary text */
+  --ink-muted: #6f6266; /* tertiary / helper */
+  --ink-faint: #9c9094; /* placeholder, eyebrow */
 
-  --paper: #fdfcf9; /* main background — warm off-white */
-  --paper-2: #f4f2ec; /* sidebar */
-  --paper-3: #efece4; /* hover fill */
+  --paper: #fdfbf8; /* main background — warm off-white */
+  --paper-2: #f5efe9; /* sidebar */
+  --paper-3: #f0e8e3; /* hover fill */
 
-  --rule: #e6e3da; /* hairlines */
-  --rule-strong: #cfcbbf;
+  --rule: #e7ddd6; /* hairlines */
+  --rule-strong: #d0c2ba;
 
-  --focus: #0f1115; /* focus ring color */
-  --focus-halo: rgba(15, 17, 21, 0.06);
+  /* Oxblood accent — citations, links, primary actions */
+  --accent: #7d353b;
+  --accent-strong: #5e2429; /* hover / pressed */
+  --accent-bg: #f5e7e6; /* tinted chip fill */
+  --accent-border: #e3c4c3;
+
+  --focus: #7d353b; /* focus ring color */
+  --focus-halo: rgba(125, 53, 59, 0.1);
 
   --radius-sm: 8px;
   --radius-md: 12px;
@@ -34,22 +40,168 @@
      ============================================================ */
 #MainMenu,
 footer,
-[data-testid="stToolbar"],
 [data-testid="stDecoration"],
 [data-testid="stHeader"] .stDeployButton,
-[data-testid="stStatusWidget"] {
+[data-testid="stStatusWidget"],
+[data-testid="stToolbarActions"],
+[data-testid="stMainMenu"] {
   display: none !important;
+}
+/* NOTE: do NOT set display:none on [data-testid="stToolbar"] itself — when
+     the sidebar is collapsed, Streamlit renders the "expand sidebar" button
+     inside the toolbar subtree, and a display:none ancestor makes that
+     button unrenderable (0x0), leaving no way to reopen the sidebar. We
+     hide the toolbar's *action* contents above and keep the toolbar laid
+     out, so only the expand control can surface. */
+[data-testid="stToolbar"] {
+  background: transparent !important;
+  pointer-events: none !important;
 }
 [data-testid="stHeader"] {
   background: transparent;
   height: 0;
+  /* Header is visually removed, but must not swallow clicks meant for the
+       content beneath it, nor clip the expand control that lives inside it. */
+  pointer-events: none;
+  overflow: visible !important;
+}
+/* ...except the control that reopens a collapsed sidebar, which lives in
+     the header. Without this it gets clipped by the zero-height header and
+     the sidebar can never be reopened. The test-id varies by Streamlit
+     version: 1.57 uses stExpandSidebarButton (wrapped in stExpandSidebar);
+     older builds used stSidebarCollapsedControl / collapsedControl. Cover
+     all of them, float at full size, clickable, above the ambient layers. */
+[data-testid="stExpandSidebar"],
+[data-testid="stExpandSidebarButton"],
+[data-testid="stSidebarCollapsedControl"],
+[data-testid="collapsedControl"] {
+  pointer-events: auto !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  /* Explicit box: with position:fixed the button loses its intrinsic
+       size and collapses to 0x0 (visible but unclickable). Pin a size. */
+  width: 2.25rem !important;
+  height: 2.25rem !important;
+  min-width: 2.25rem !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  color: var(--ink-soft) !important;
+  background: var(--paper) !important;
+  border: 1px solid var(--rule-strong) !important;
+  border-radius: var(--radius-sm) !important;
+  box-shadow: 0 2px 8px -3px rgba(15, 17, 21, 0.18) !important;
+  /* Pin to the viewport so the zero-height header can't clip it. */
+  position: fixed !important;
+  top: 0.65rem !important;
+  left: 0.7rem !important;
+  z-index: 1000 !important;
+}
+/* Make sure the icon inside has a real size too. */
+[data-testid="stExpandSidebarButton"] svg,
+[data-testid="stExpandSidebar"] svg {
+  width: 1.25rem !important;
+  height: 1.25rem !important;
+}
+/* The icon is a Material Symbols ligature glyph, not an SVG. Our global
+     serif/sans typography would render it as the literal text
+     "keyboard_double_arrow_right", so force the icon font back on it. */
+[data-testid="stExpandSidebarButton"] span,
+[data-testid="stExpandSidebarButton"] .stIconMaterial,
+[data-testid="stExpandSidebarButton"] [data-testid="stIconMaterial"] {
+  font-family:
+    "Material Symbols Rounded", "Material Symbols Outlined", "Material Icons" !important;
+  font-size: 1.4rem !important;
+  line-height: 1 !important;
+  color: var(--ink-soft) !important;
 }
 
 /* ============================================================
      Base
      ============================================================ */
+/* Always reserve room for the vertical scrollbar. As an answer streams
+     in, the content eventually crosses the viewport height and the
+     scrollbar appears — without this, that narrows the layout width and
+     the centered fixed chat-input bar lurches sideways on every repaint.
+     Reserving the gutter keeps the layout width constant so the input
+     bar stays perfectly still while text streams. (Harmless on whichever
+     of these elements isn't the actual scroll container.) */
+html,
+[data-testid="stAppViewContainer"],
+[data-testid="stMain"] {
+  scrollbar-gutter: stable;
+  /* Keep scroll momentum inside the message area: when you reach the top
+       or bottom, the scroll stops here instead of chaining to the page and
+       letting the viewport (and the fixed composer with it) bounce. */
+  overscroll-behavior: contain;
+}
+
 .stApp {
   background: var(--paper);
+}
+
+/* ============================================================
+     Scrollbars — match the warm paper/ink palette. A slim, quiet
+     thumb that sits on the paper, darkens a touch on hover. Styled
+     for WebKit/Blink (Chrome, Edge, Brave, Safari) and Firefox.
+     ============================================================ */
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--rule-strong) transparent;
+}
+/* The main scroll containers set their own scrollbar-color by default, which
+     beats the universal selector above — re-assert on them explicitly. */
+html,
+body,
+[data-testid="stApp"],
+[data-testid="stAppViewContainer"],
+[data-testid="stMain"],
+[data-testid="stSidebar"],
+[data-testid="stSidebarContent"],
+section.main {
+  scrollbar-width: thin !important;
+  scrollbar-color: var(--rule-strong) transparent !important;
+}
+/* WebKit / Blink */
+::-webkit-scrollbar {
+  width: 11px;
+  height: 11px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: var(--rule-strong);
+  border-radius: 999px;
+  /* transparent border creates inset padding so the thumb reads as slim
+       and floats off the track edges */
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--ink-faint);
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+/* The sidebar sits on a slightly darker paper — give its thumb a hair
+     more contrast so it stays visible there too. */
+[data-testid="stSidebar"] ::-webkit-scrollbar-thumb {
+  background-color: var(--ink-faint);
+  border-color: transparent;
+}
+
+/* The auto-scroll helper (see keep_view_pinned in app.py) renders as a
+     zero-height iframe whose only job is running a scroll observer. Remove
+     its element container from the layout so it contributes no vertical
+     gap. A display:none iframe still loads and executes its script, so the
+     observer keeps working. Scoped to height="0" so real component iframes
+     are never affected. */
+[data-testid="stElementContainer"]:has(iframe[height="0"]) {
+  display: none !important;
 }
 
 /* Soft warm glow — gives the canvas a center of gravity without clutter */
@@ -85,10 +237,22 @@ footer,
 }
 /* keep real content above the ambient layers */
 [data-testid="stSidebar"],
-.block-container,
-[data-testid="stBottom"] {
+.block-container {
   position: relative;
   z-index: 1;
+}
+/* stBottom: lift above the glow WITHOUT touching its position — Streamlit
+     positions it (fixed, aligned to the message column past the sidebar),
+     and overriding that is what previously detached/mis-centered the bar.
+     z-index applies to the natively-fixed element on its own. */
+[data-testid="stBottom"] {
+  z-index: 1;
+  /* Float the bar a little above the bottom edge so it doesn't sit
+       cramped against the window / taskbar. Padding (not position) lifts
+       the pill while the container stays anchored at the bottom, so the
+       native fixed + column alignment is untouched. safe-area keeps the
+       same breathing room on devices with a home indicator. */
+  padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px)) !important;
 }
 
 html,
@@ -107,8 +271,7 @@ textarea,
 .ui-sans,
 .eyebrow,
 .muted,
-.sidebar-sub,
-.suggest-label {
+.sidebar-sub {
   font-family: var(--sans) !important;
 }
 
@@ -239,56 +402,6 @@ textarea,
   animation: rise 620ms cubic-bezier(0.22, 1, 0.36, 1) 180ms both;
 }
 
-/* ---- Suggestions ---- */
-.suggest-label {
-  font-size: 0.7rem;
-  font-weight: 600;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
-  margin: 0 0 0.6rem 0.05rem;
-}
-
-/* Main-area suggestion buttons — quiet, list-like with hairline */
-.block-container .stButton > button {
-  background: transparent;
-  color: var(--ink-soft);
-  border: none;
-  border-top: 1px solid var(--rule);
-  border-radius: 0;
-  padding: 0.95rem 0.25rem;
-  font-family: var(--serif);
-  font-size: 1rem;
-  font-weight: 400;
-  text-align: left;
-  justify-content: flex-start;
-  line-height: 1.5;
-  transition:
-    color 140ms ease,
-    padding-left 180ms ease,
-    background 140ms ease;
-  box-shadow: none;
-}
-.block-container .stButton > button > div {
-  justify-content: flex-start;
-}
-.block-container .stButton > button:last-of-type {
-  border-bottom: 1px solid var(--rule);
-}
-.block-container .stButton > button:hover {
-  color: var(--ink);
-  background: transparent;
-  padding-left: 0.65rem;
-}
-.block-container .stButton > button:focus,
-.block-container .stButton > button:active {
-  color: var(--ink) !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  outline: none !important;
-  border-color: var(--rule) !important;
-}
-
 /* ============================================================
      User message — custom right-aligned bubble
      (rendered as our own HTML, NOT via st.chat_message, so it no
@@ -300,6 +413,23 @@ textarea,
   align-items: flex-end;
   width: 100%;
   margin: 0.6rem 0 0.4rem;
+}
+/* Smooth, ChatGPT-like entrance for the question the moment it appears.
+     Slightly slower + gentle ease so it settles in rather than popping.
+     transform-origin near the bubble's own corner keeps the motion
+     feeling anchored to the sender's side. */
+.user-row .user-bubble {
+  animation: user-in 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes user-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 .user-label {
   font-family: var(--sans);
@@ -370,9 +500,9 @@ textarea,
   font-weight: 500;
   letter-spacing: 0.01em;
   line-height: 1.4;
-  color: var(--ink-muted);
-  background: var(--paper-2);
-  border: 1px solid var(--rule);
+  color: var(--accent);
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-border);
   border-radius: 7px;
   padding: 0.08em 0.5em;
   margin: 0 0.05em;
@@ -384,9 +514,92 @@ textarea,
     border-color 140ms ease;
 }
 [data-testid="stChatMessageContent"] .cite:hover {
-  background: var(--paper-3);
-  border-color: var(--rule-strong);
+  background: #efd9d8;
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+/* Links in answers take the oxblood accent (not Streamlit's default blue). */
+[data-testid="stChatMessageContent"] a {
+  color: var(--accent) !important;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--accent-border);
+  transition:
+    color 140ms ease,
+    text-decoration-color 140ms ease;
+}
+[data-testid="stChatMessageContent"] a:hover {
+  color: var(--accent-strong) !important;
+  text-decoration-color: var(--accent);
+}
+
+/* ============================================================
+     Sources disclosure — deliberately quiet so the answer text
+     stays the focus. Just a faint toggle line that opens an
+     indented plain list. No cards, borders, or accent color.
+     ============================================================ */
+.sources {
+  margin-top: 1.5rem;
+}
+.sources-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  font-family: var(--sans);
+  font-size: 0.75rem;
+  color: var(--ink-faint);
+  background: none;
+  border: none;
+  padding: 0;
+  user-select: none;
+  transition: color 140ms ease;
+}
+.sources-toggle:hover {
+  color: var(--ink-muted);
+}
+.sources-toggle .chev {
+  font-size: 0.6rem;
+  opacity: 0.7;
+  transition: transform 180ms ease;
+}
+.sources.open .sources-toggle .chev {
+  transform: rotate(90deg);
+}
+.sources-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  /* Smooth open/closed: animate max-height + opacity. Closed clips to 0;
+       open expands to a ceiling comfortably above any realistic list. */
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition:
+    max-height 440ms cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 380ms ease,
+    margin-top 440ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.sources.open .sources-list {
+  max-height: 40rem;
+  opacity: 1;
+  margin-top: 0.7rem;
+}
+.source-item {
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  color: var(--ink-muted);
+  padding: 0.28rem 0 0.28rem 0.9rem;
+  line-height: 1.5;
+}
+.source-item .nm {
   color: var(--ink-soft);
+}
+.source-item .pg {
+  color: var(--ink-faint);
+  font-family: "SF Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.92em;
 }
 
 /* Latest assistant answer rises in gently as it begins streaming */
@@ -401,7 +614,7 @@ textarea,
   }
 }
 [data-testid="stChatMessage"]:last-of-type {
-  animation: msg-in 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: msg-in 480ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 /* Hide default avatars — selectors cover current + older Streamlit */
@@ -478,7 +691,6 @@ textarea,
     0 6px 14px -2px rgba(15, 17, 21, 0.1),
     0 18px 38px -10px rgba(15, 17, 21, 0.16),
     inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
-  transform: translateY(-1px);
 }
 [data-testid="stChatInput"] > div:focus-within {
   background:
@@ -489,7 +701,6 @@ textarea,
     0 6px 16px -2px rgba(15, 17, 21, 0.12),
     0 20px 40px -10px rgba(15, 17, 21, 0.18),
     inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
-  transform: translateY(-1px);
   outline: none !important;
 }
 
@@ -680,29 +891,71 @@ textarea,
 .thinking-dots span:nth-child(3) {
   animation-delay: 0.3s;
 }
-.thinking-text {
+/* Staged thinking indicator — phases reveal in sequence so the wait reads
+     as real retrieval work (embed → retrieve → rerank → write). Each stage
+     is absolutely stacked; only one is visible at a time via timed opacity.
+     The last stage holds (no fade-out) since streaming usually begins while
+     it shows. */
+.thinking-stages {
+  position: relative;
+  display: inline-block;
+  min-width: 13ch;
+  height: 1.3em;
   font-family: var(--sans);
   font-size: 0.9rem;
   letter-spacing: 0.01em;
-  /* gentle left-to-right shimmer on the text itself */
-  background: linear-gradient(
-    90deg,
-    var(--ink-faint) 0%,
-    var(--ink) 45%,
-    var(--ink-faint) 90%
-  );
-  background-size: 220% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: thinking-shimmer 1.9s linear infinite;
 }
-@keyframes thinking-shimmer {
+.thinking-stages .stage {
+  position: absolute;
+  left: 0;
+  top: 0;
+  white-space: nowrap;
+  opacity: 0;
+  color: var(--ink-soft);
+  animation: stage-cycle 4.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.thinking-stages .stage-1 {
+  animation-delay: 0s;
+}
+.thinking-stages .stage-2 {
+  animation-delay: 1.35s;
+}
+.thinking-stages .stage-3 {
+  animation-delay: 2.7s;
+}
+/* final stage fades in and stays */
+.thinking-stages .stage-4 {
+  animation: stage-hold 0.7s cubic-bezier(0.4, 0, 0.2, 1) 4.05s forwards;
+}
+@keyframes stage-cycle {
+  0% {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  7% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  22% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  29% {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes stage-hold {
   from {
-    background-position: 120% 0;
+    opacity: 0;
+    transform: translateY(4px);
   }
   to {
-    background-position: -120% 0;
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -720,6 +973,150 @@ textarea,
   background-color: var(--paper) !important;
   border-top: none !important;
   box-shadow: none !important;
+}
+
+/* ------------------------------------------------------------
+     Tie the composer to the conversation as ONE component.
+     Streamlit's native bottom container already (a) stays fixed while
+     the message area scrolls and (b) lives in the same column as the
+     messages — to the RIGHT of the sidebar. Re-anchoring it to the
+     viewport (as a hard position:fixed would) detaches it from that
+     column and mis-centers it against the text, which is what made it
+     look like a separate floating pill. So we leave its positioning to
+     Streamlit and instead:
+       1. match its inner width to the message column so the left/right
+          edges line up with the answer text above it, and
+       2. fade the conversation into it with a soft scrim, so the text
+          appears to flow down into the input rather than hover above a
+          disconnected pill.
+     Solidity is already handled (scrollbar-gutter + overscroll-behavior
+     + removed transforms above), so the bar stays put without the weld.
+     ------------------------------------------------------------ */
+[data-testid="stBottomBlockContainer"] {
+  max-width: 740px !important; /* same column as the main .block-container */
+}
+/* Soft fade above the bar: scrolling text dissolves into the paper just
+     before it reaches the composer, visually bridging the two sections. */
+[data-testid="stBottom"]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -2.75rem;
+  height: 2.75rem;
+  background: linear-gradient(
+    to top,
+    var(--paper) 20%,
+    rgba(253, 252, 249, 0) 100%
+  );
+  pointer-events: none;
+}
+
+/* ============================================================
+     Jump-to-latest button — floats above the composer, fades in
+     only when the user has scrolled away from the live answer.
+     Positioned by JS (left/bottom set inline from the composer rect);
+     here we own only appearance and the show/hide transition.
+     ============================================================ */
+.jump-latest {
+  position: fixed;
+  left: 50%; /* JS overrides with the real composer center */
+  transform: translate(-50%, 6px);
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--rule-strong);
+  border-radius: 50%;
+  background: var(--paper);
+  color: var(--ink-soft);
+  cursor: pointer;
+  z-index: 60;
+  opacity: 0;
+  pointer-events: none;
+  box-shadow:
+    0 2px 6px -1px rgba(15, 17, 21, 0.12),
+    0 8px 20px -6px rgba(15, 17, 21, 0.18);
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease,
+    color 140ms ease,
+    border-color 140ms ease;
+}
+.jump-latest.is-visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  pointer-events: auto;
+}
+.jump-latest:hover {
+  color: var(--ink);
+  border-color: var(--ink-soft);
+}
+.jump-latest:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 3px var(--focus-halo),
+    0 2px 6px -1px rgba(15, 17, 21, 0.12);
+}
+
+/* ============================================================
+     Assistant answer actions — the Copy affordance under each
+     answer. Quiet by default, surfaces on hover of the message.
+     ============================================================ */
+.msg-actions {
+  margin-top: 0.85rem;
+  display: flex;
+  gap: 0.4rem;
+}
+.copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.6rem;
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  line-height: 1;
+  color: var(--ink-muted);
+  background: transparent;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity 160ms ease,
+    color 140ms ease,
+    border-color 140ms ease,
+    background 140ms ease;
+}
+/* Reveal on hover/focus of the message, and keep visible once focused. */
+[data-testid="stChatMessage"]:hover .copy-btn,
+.copy-btn:focus-visible,
+.copy-btn.copied {
+  opacity: 1;
+}
+.copy-btn:hover {
+  color: var(--ink);
+  border-color: var(--rule-strong);
+  background: var(--paper-3);
+}
+.copy-btn:focus-visible {
+  outline: none;
+  border-color: var(--ink-soft);
+  box-shadow: 0 0 0 3px var(--focus-halo);
+}
+.copy-btn.copied {
+  color: var(--ink);
+  border-color: var(--rule-strong);
+}
+.copy-btn svg {
+  flex: none;
+}
+/* Touch devices have no hover — keep the button discoverable there. */
+@media (hover: none) {
+  .copy-btn {
+    opacity: 1;
+  }
 }
 
 /* ============================================================
@@ -756,17 +1153,24 @@ textarea,
   .eyebrow,
   .welcome-title,
   .welcome-sub,
+  .user-row .user-bubble,
   [data-testid="stChatMessage"]:last-of-type,
   .error-note {
     animation: none !important;
   }
-  .thinking-text {
+  /* Reduced motion: don't cycle stages — just show the final one. */
+  .thinking-stages .stage {
     animation: none !important;
-    -webkit-text-fill-color: var(--ink-muted);
+  }
+  .thinking-stages .stage-4 {
+    opacity: 1 !important;
+    transform: none !important;
   }
   [data-testid="stChatInput"] > div,
   [data-testid="stSidebar"] .stButton > button,
-  [data-testid="stChatInput"] button {
+  [data-testid="stChatInput"] button,
+  .jump-latest,
+  .copy-btn {
     transition: none !important;
   }
 }

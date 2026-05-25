@@ -15,6 +15,7 @@ from dotenv import load_dotenv
 load_dotenv(Path(__file__).parent / ".env")
 
 import streamlit as st
+import streamlit.components.v1 as components
 from pipelines.rag_pipeline import RAGPipeline
 
 logging.basicConfig(
@@ -43,16 +44,35 @@ st.set_page_config(
 )
 
 
-SUGGESTED_QUESTIONS = [
-    "Give me an overview of the main topics covered.",
-    "What are the key concepts I should understand?",
-    "Summarize the most important findings.",
-]
+_COPY_ICON = (
+    "<svg viewBox='0 0 24 24' width='14' height='14' fill='none' "
+    "stroke='currentColor' stroke-width='2' stroke-linecap='round' "
+    "stroke-linejoin='round' aria-hidden='true'>"
+    "<rect x='9' y='9' width='13' height='13' rx='2'></rect>"
+    "<path d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'></path>"
+    "</svg>"
+)
+
+# Appended to the final assistant render (not mid-stream). Rendered as part
+# of Streamlit's own markdown so React keeps it across reruns; the click is
+# handled by a single delegated listener in install_client_behaviors().
+ASSISTANT_ACTIONS_HTML = (
+    "\n\n<div class='msg-actions'>"
+    "<button class='copy-btn' type='button' aria-label='Copy answer'>"
+    f"{_COPY_ICON}<span class='copy-label'>Copy</span>"
+    "</button>"
+    "</div>"
+)
 
 THINKING_HTML = (
     "<div class='thinking'>"
     "<span class='thinking-dots'><span></span><span></span><span></span></span>"
-    "<span class='thinking-text'>Searching documents…</span>"
+    "<span class='thinking-stages'>"
+    "<span class='stage stage-1'>Embedding query</span>"
+    "<span class='stage stage-2'>Retrieving passages</span>"
+    "<span class='stage stage-3'>Reranking results</span>"
+    "<span class='stage stage-4'>Writing answer</span>"
+    "</span>"
     "</div>"
 )
 
@@ -89,6 +109,51 @@ def chipify_citations(text: str) -> str:
     return _CITATION_RE.sub(repl, text)
 
 
+def sources_html(text: str) -> str:
+    """Build the subtle 'N sources' disclosure from an answer's citations.
+
+    Reuses the same citation regex as the chips, so the list always matches
+    what's cited in the text. Documents are deduped, their pages collected
+    and sorted, and the whole thing rendered as a quiet toggle + indented
+    list. Returns "" when the answer cites nothing, so unsourced answers get
+    no disclosure at all. The toggle is wired by the delegated listener in
+    install_client_behaviors().
+    """
+    pages: "dict[str, set[int]]" = {}
+    order: "list[str]" = []
+    for match in _CITATION_RE.finditer(text):
+        name = match.group(1).strip()
+        page = int(match.group(2))
+        if name not in pages:
+            pages[name] = set()
+            order.append(name)
+        pages[name].add(page)
+
+    if not order:
+        return ""
+
+    total = sum(len(p) for p in pages.values())
+    noun = "source" if total == 1 else "sources"
+
+    items = []
+    for name in order:
+        safe = html.escape(name)
+        pgs = ", ".join(str(p) for p in sorted(pages[name]))
+        items.append(
+            f"<li class='source-item'><span class='nm'>{safe}</span> "
+            f"<span class='pg'>p. {pgs}</span></li>"
+        )
+
+    return (
+        "\n\n<div class='sources'>"
+        "<button class='sources-toggle' type='button' aria-expanded='false'>"
+        "<span class='chev' aria-hidden='true'>&#9654;</span> "
+        f"{total} {noun}</button>"
+        f"<ul class='sources-list'>{''.join(items)}</ul>"
+        "</div>"
+    )
+
+
 def load_css() -> None:
     """Inject the external stylesheet. Degrades gracefully if missing."""
     css_path = Path(__file__).parent / "styles.css"
@@ -98,6 +163,185 @@ def load_css() -> None:
         logger.warning("styles.css not found at %s — running unstyled", css_path)
         return
     st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
+
+
+def install_client_behaviors() -> None:
+    """Install all client-side niceties in one place, via one helper iframe.
+
+    Injected JS only runs inside a Streamlit helper iframe, so we host
+    everything in a single zero-height one (collapsed out of the layout via
+    CSS). A flag on the parent document keeps everything installed exactly
+    once, so Streamlit re-running this on every interaction never stacks
+    duplicate listeners. The behaviors:
+
+      • Auto-scroll — keep the newest message in view while it streams, but
+        only while the user is already at the bottom; pause when they scroll
+        up to re-read, resume when they return (the courtesy ChatGPT extends).
+      • Jump-to-latest — a floating button that fades in when the user has
+        scrolled away from the bottom; clicking it snaps back and re-pins.
+        It reads the composer's real position so it centers on the message
+        column and respects the sidebar offset, no hardcoded geometry.
+      • Auto-focus — focus the question box once on first load only, so the
+        user can type immediately without ever stealing focus on a rerun.
+      • Copy — one delegated click handler copies an assistant answer's text
+        (citations included; the button itself excluded). Because the button
+        is part of Streamlit's rendered markdown, it survives every rerun.
+    """
+    components.html(
+        """
+        <script>
+        (function () {
+          const doc = window.parent.document;
+          const win = window.parent;
+          // Version the guard so that when this script changes (e.g. a new
+          // handler is added), an existing page reinstalls instead of being
+          // blocked by a stale "already installed" flag. Bump on changes.
+          const VERSION = 3;
+          if (doc.__ragClientVersion === VERSION) return;  // already current
+          doc.__ragClientVersion = VERSION;
+
+          const NEAR = 140;                          // px tolerance for "at bottom"
+
+          // The scroll container varies across Streamlit versions: the
+          // main <section> in some, the document itself in others.
+          function scroller() {
+            return doc.querySelector('section.main')
+                || doc.querySelector('[data-testid="stMain"]')
+                || doc.scrollingElement
+                || doc.documentElement;
+          }
+          function atBottom(el) {
+            if (!el) return true;
+            return el.scrollHeight - el.scrollTop - el.clientHeight <= NEAR;
+          }
+          function toBottom() {
+            const el = scroller();
+            if (el) el.scrollTop = el.scrollHeight;
+          }
+
+          /* ---------- jump-to-latest button ---------- */
+          const jump = doc.createElement('button');
+          jump.type = 'button';
+          jump.className = 'jump-latest';
+          jump.setAttribute('aria-label', 'Jump to latest');
+          jump.innerHTML =
+              '<svg viewBox="0 0 24 24" width="16" height="16" fill="none"'
+            + ' stroke="currentColor" stroke-width="2" stroke-linecap="round"'
+            + ' stroke-linejoin="round"><path d="M12 5v14"></path>'
+            + '<path d="M19 12l-7 7-7-7"></path></svg>';
+          doc.body.appendChild(jump);
+
+          // Center the button on the composer (so it tracks the message
+          // column / sidebar offset) and sit it just above the input.
+          function placeJump() {
+            const pill = doc.querySelector('[data-testid="stChatInput"]')
+                      || doc.querySelector('[data-testid="stBottom"]');
+            if (!pill) return;
+            const r = pill.getBoundingClientRect();
+            jump.style.left = (r.left + r.width / 2) + 'px';
+            jump.style.bottom = (win.innerHeight - r.top + 10) + 'px';
+          }
+          jump.addEventListener('click', function () {
+            pinned = true;
+            toBottom();
+            updateJump();
+          });
+
+          let pinned = true;
+          function updateJump() {
+            placeJump();
+            jump.classList.toggle('is-visible', !pinned);
+          }
+
+          // Coalesce scroll events into one layout read/write per frame.
+          let sQueued = false;
+          function onScroll() {
+            if (sQueued) return;
+            sQueued = true;
+            win.requestAnimationFrame(function () {
+              sQueued = false;
+              pinned = atBottom(scroller());
+              updateJump();
+            });
+          }
+          [scroller(), win].forEach(function (t) {
+            if (t) t.addEventListener('scroll', onScroll, { passive: true });
+          });
+          win.addEventListener('resize', placeJump);
+
+          /* ---------- follow the stream while pinned ---------- */
+          let mQueued = false;
+          const obs = new MutationObserver(function () {
+            if (mQueued) return;
+            mQueued = true;
+            win.requestAnimationFrame(function () {
+              mQueued = false;
+              if (pinned) toBottom();
+              updateJump();
+            });
+          });
+          obs.observe(doc.body, { childList: true, subtree: true, characterData: true });
+
+          /* ---------- copy an assistant answer (delegated) ---------- */
+          doc.addEventListener('click', function (e) {
+            const btn = e.target.closest && e.target.closest('.copy-btn');
+            if (!btn) return;
+            const content = btn.closest('[data-testid="stChatMessageContent"]')
+                         || btn.closest('[data-testid="stChatMessage"]');
+            if (!content) return;
+            const clone = content.cloneNode(true);
+            clone.querySelectorAll('.msg-actions').forEach(function (n) { n.remove(); });
+            const text = (clone.innerText || '').trim();
+
+            function flash() {
+              btn.classList.add('copied');
+              const label = btn.querySelector('.copy-label');
+              const prev = label ? label.textContent : '';
+              if (label) label.textContent = 'Copied';
+              setTimeout(function () {
+                btn.classList.remove('copied');
+                if (label) label.textContent = prev || 'Copy';
+              }, 1400);
+            }
+            if (win.navigator.clipboard && win.navigator.clipboard.writeText) {
+              win.navigator.clipboard.writeText(text).then(flash).catch(function () {});
+            } else {
+              // Fallback for non-secure contexts without the async API.
+              const ta = doc.createElement('textarea');
+              ta.value = text;
+              ta.style.position = 'fixed';
+              ta.style.opacity = '0';
+              doc.body.appendChild(ta);
+              ta.select();
+              try { doc.execCommand('copy'); flash(); } catch (err) {}
+              doc.body.removeChild(ta);
+            }
+          }, true);
+
+          /* ---------- toggle a sources disclosure (delegated) ---------- */
+          doc.addEventListener('click', function (e) {
+            const t = e.target.closest && e.target.closest('.sources-toggle');
+            if (!t) return;
+            const box = t.closest('.sources');
+            if (!box) return;
+            const open = box.classList.toggle('open');
+            t.setAttribute('aria-expanded', open ? 'true' : 'false');
+          }, true);
+
+          /* ---------- focus the question box once on first load ---------- */
+          (function focusOnce(n) {
+            const ta = doc.querySelector('[data-testid="stChatInput"] textarea');
+            if (ta) { ta.focus(); }
+            else if (n > 0) { setTimeout(function () { focusOnce(n - 1); }, 150); }
+          })(20);
+
+          placeJump();
+          toBottom();
+        })();
+        </script>
+        """,
+        height=0,
+    )
 
 
 @st.cache_resource(show_spinner=False)
@@ -140,8 +384,6 @@ def get_pipeline() -> RAGPipeline:
 def init_session() -> None:
     if "messages" not in st.session_state:
         st.session_state.messages = []
-    if "pending_prompt" not in st.session_state:
-        st.session_state.pending_prompt = None
 
 
 def reset_conversation(pipeline: RAGPipeline) -> None:
@@ -152,7 +394,6 @@ def reset_conversation(pipeline: RAGPipeline) -> None:
     if neither exists.
     """
     st.session_state.messages = []
-    st.session_state.pending_prompt = None
 
     reset = getattr(pipeline, "reset", None)
     if callable(reset):
@@ -214,13 +455,28 @@ def render_user_message(text: str) -> None:
     )
 
 
+def _safe_partial_markdown(text: str) -> str:
+    """Make in-progress markdown safe to render each frame.
+
+    A stream can pause mid-code-block, leaving an unclosed ``` fence that
+    would swallow the rest of the answer's formatting. If the number of
+    fences is odd, append a temporary closing fence so the partial renders
+    cleanly; the real final render (which has balanced fences) replaces it.
+    """
+    if text.count("```") % 2 == 1:
+        return text + "\n```"
+    return text
+
+
 def stream_with_indicator(pipeline: RAGPipeline, prompt: str) -> str:
     """Stream the answer behind a 'Searching documents…' indicator.
 
     Paints a thinking state immediately, then swaps it for the answer as
     soon as the first token arrives, accumulating chunks so the text
-    streams in live. Repaints are time-throttled, and any failure in the
-    pipeline is caught and shown inline instead of crashing the turn.
+    streams in live. Each repaint now renders markdown progressively (so
+    headings, lists, bold and code format as they arrive instead of
+    snapping in at the end), time-throttled to stay smooth. Any failure in
+    the pipeline is caught and shown inline instead of crashing the turn.
 
     Returns the full answer text, or "" if nothing was produced / it failed.
     """
@@ -234,7 +490,11 @@ def stream_with_indicator(pipeline: RAGPipeline, prompt: str) -> str:
             chunks.append(str(chunk))
             now = time.monotonic()
             if now - last_paint > _STREAM_REPAINT_INTERVAL:
-                placeholder.markdown("".join(chunks) + " ▌")  # blinking caret
+                # Progressive markdown render + a thin streaming caret. No
+                # unsafe_allow_html here: citations are chipped only in the
+                # final paint, and partial HTML could render half-formed.
+                partial = _safe_partial_markdown("".join(chunks))
+                placeholder.markdown(partial + " ▌")
                 last_paint = now
     except Exception:
         logger.exception("stream_answer failed for prompt=%r", prompt)
@@ -247,9 +507,13 @@ def stream_with_indicator(pipeline: RAGPipeline, prompt: str) -> str:
         placeholder.markdown(ERROR_HTML, unsafe_allow_html=True)
         return ""
 
-    # Final clean render — drops the caret, parses markdown, and turns
-    # source citations into styled chips.
-    placeholder.markdown(chipify_citations(full), unsafe_allow_html=True)
+    # Final clean render — drops the caret, parses markdown, turns source
+    # citations into styled chips, appends the sources disclosure, then the
+    # copy affordance.
+    placeholder.markdown(
+        chipify_citations(full) + sources_html(full) + ASSISTANT_ACTIONS_HTML,
+        unsafe_allow_html=True,
+    )
     return full
 
 
@@ -259,7 +523,12 @@ def render_history() -> None:
             render_user_message(msg["content"])
         else:
             with st.chat_message("assistant"):
-                st.markdown(chipify_citations(msg["content"]), unsafe_allow_html=True)
+                st.markdown(
+                    chipify_citations(msg["content"])
+                    + sources_html(msg["content"])
+                    + ASSISTANT_ACTIONS_HTML,
+                    unsafe_allow_html=True,
+                )
 
 
 def handle_user_input(pipeline: RAGPipeline, prompt: str) -> None:
@@ -276,6 +545,7 @@ def handle_user_input(pipeline: RAGPipeline, prompt: str) -> None:
 
 def main() -> None:
     load_css()
+    install_client_behaviors()
     init_session()
     pipeline = get_pipeline()
 
@@ -285,11 +555,6 @@ def main() -> None:
         render_empty_state()
     else:
         render_history()
-
-    if st.session_state.pending_prompt:
-        prompt = st.session_state.pending_prompt
-        st.session_state.pending_prompt = None
-        handle_user_input(pipeline, prompt)
 
     if prompt := st.chat_input("Ask a question…"):
         handle_user_input(pipeline, prompt)
