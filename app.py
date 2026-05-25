@@ -2,7 +2,7 @@
 Streamlit UI for the RAG system.
 Run with:  streamlit run app.py
 
-Styling lives in the sibling ``styles.css`` — this file is logic only.
+Styling lives in ``styles/`` partials — this file is logic only.
 """
 import html
 import re
@@ -66,7 +66,7 @@ ASSISTANT_ACTIONS_HTML = (
 
 THINKING_HTML = (
     "<div class='thinking'>"
-    "<span class='thinking-dots'><span></span><span></span><span></span></span>"
+    "<span class='thinking-glyph' aria-hidden='true'>\u25d0</span>"
     "<span class='thinking-stages'>"
     "<span class='stage stage-1'>Embedding query</span>"
     "<span class='stage stage-2'>Retrieving passages</span>"
@@ -99,12 +99,22 @@ def chipify_citations(text: str) -> str:
     Applied only to the final answer (not mid-stream) so partial text
     can't produce broken markup. Escapes markdown-sensitive characters
     in the filename so e.g. under_scores don't render as emphasis.
+
+    Each chip carries ``data-doc`` and ``data-page`` so the client-side
+    handler can match it to the corresponding entry in the sources list
+    and pulse-highlight that entry on click.
     """
     def repl(match: "re.Match[str]") -> str:
         filename = match.group(1).strip()
         page = match.group(2)
         safe = filename.replace("_", "&#95;").replace("*", "&#42;")
-        return f"<span class='cite'>{safe} · p.{page}</span>"
+        attr_doc = html.escape(filename, quote=True)
+        return (
+            f"<span class='cite' role='button' tabindex='0' "
+            f"data-doc=\"{attr_doc}\" data-page=\"{page}\" "
+            f"title='View this source in the citation list'>"
+            f"{safe} · p.{page}</span>"
+        )
 
     return _CITATION_RE.sub(repl, text)
 
@@ -138,9 +148,11 @@ def sources_html(text: str) -> str:
     items = []
     for name in order:
         safe = html.escape(name)
+        attr_doc = html.escape(name, quote=True)
         pgs = ", ".join(str(p) for p in sorted(pages[name]))
         items.append(
-            f"<li class='source-item'><span class='nm'>{safe}</span> "
+            f"<li class='source-item' data-doc=\"{attr_doc}\">"
+            f"<span class='nm'>{safe}</span> "
             f"<span class='pg'>p. {pgs}</span></li>"
         )
 
@@ -155,14 +167,30 @@ def sources_html(text: str) -> str:
 
 
 def load_css() -> None:
-    """Inject the external stylesheet. Degrades gracefully if missing."""
-    css_path = Path(__file__).parent / "styles.css"
-    try:
-        css = css_path.read_text(encoding="utf-8")
-    except FileNotFoundError:
-        logger.warning("styles.css not found at %s — running unstyled", css_path)
+    """Inject stylesheets from styles/ partials, concatenated in order."""
+    styles_dir = Path(__file__).parent / "styles"
+    partials = [
+        "_tokens.css",
+        "_streamlit-chrome.css",
+        "_base.css",
+        "_sidebar.css",
+        "_welcome.css",
+        "_messages.css",
+        "_chat-input.css",
+        "_loading.css",
+        "_responsive.css",
+    ]
+    chunks: list[str] = []
+    for name in partials:
+        path = styles_dir / name
+        try:
+            chunks.append(path.read_text(encoding="utf-8"))
+        except FileNotFoundError:
+            logger.warning("CSS partial not found: %s — skipping", path)
+    if not chunks:
+        logger.warning("No CSS partials found in %s — running unstyled", styles_dir)
         return
-    st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
+    st.markdown(f"<style>{''.join(chunks)}</style>", unsafe_allow_html=True)
 
 
 def install_client_behaviors() -> None:
@@ -196,7 +224,7 @@ def install_client_behaviors() -> None:
           // Version the guard so that when this script changes (e.g. a new
           // handler is added), an existing page reinstalls instead of being
           // blocked by a stale "already installed" flag. Bump on changes.
-          const VERSION = 3;
+          const VERSION = 4;
           if (doc.__ragClientVersion === VERSION) return;  // already current
           doc.__ragClientVersion = VERSION;
 
@@ -328,6 +356,55 @@ def install_client_behaviors() -> None:
             t.setAttribute('aria-expanded', open ? 'true' : 'false');
           }, true);
 
+          /* ---------- citation chip click: open sources + highlight match ----
+             Citations are the killer feature of a RAG UI — making them
+             interactive (instead of decorative) is what turns the answer
+             into something the user can verify. This handler opens the
+             sources panel for the answer the chip belongs to, then pulses
+             the matching source item so the user can see where it came
+             from. A future enhancement would slide in the actual passage. */
+          doc.addEventListener('click', function (e) {
+            const chip = e.target.closest && e.target.closest('.cite');
+            if (!chip) return;
+            const docname = chip.dataset.doc;
+            if (!docname) return;
+            const root = chip.closest('[data-testid="stChatMessageContent"]')
+                      || chip.closest('[data-testid="stChatMessage"]')
+                      || doc;
+            const box = root.querySelector('.sources');
+            if (!box) return;
+            // Open the panel if it isn't already.
+            if (!box.classList.contains('open')) {
+              box.classList.add('open');
+              const tog = box.querySelector('.sources-toggle');
+              if (tog) tog.setAttribute('aria-expanded', 'true');
+            }
+            // Pulse the matching source row. Small delay so the open
+            // animation has started before the pulse lands.
+            const items = box.querySelectorAll('.source-item');
+            items.forEach(function (it) { it.classList.remove('is-pulsing'); });
+            setTimeout(function () {
+              let matched = null;
+              items.forEach(function (it) {
+                if (!matched && it.dataset.doc === docname) matched = it;
+              });
+              if (matched) {
+                matched.classList.add('is-pulsing');
+                setTimeout(function () {
+                  matched.classList.remove('is-pulsing');
+                }, 1800);
+              }
+            }, 320);
+          }, true);
+          // Keyboard parity: Enter / Space on a focused chip triggers click.
+          doc.addEventListener('keydown', function (e) {
+            if (e.key !== 'Enter' && e.key !== ' ') return;
+            const chip = e.target.closest && e.target.closest('.cite');
+            if (!chip) return;
+            e.preventDefault();
+            chip.click();
+          });
+
           /* ---------- focus the question box once on first load ---------- */
           (function focusOnce(n) {
             const ta = doc.querySelector('[data-testid="stChatInput"] textarea');
@@ -408,6 +485,46 @@ def reset_conversation(pipeline: RAGPipeline) -> None:
         logger.warning("Pipeline exposes no reset() or memory.clear(); memory not cleared")
 
 
+def _list_indexed_documents(pipeline: RAGPipeline) -> "tuple[list[dict], int]":
+    """Introspect what's in the index for the sidebar Library section.
+
+    Document names come from ``pipeline.bm25_by_source`` — a dict keyed by
+    source filename with a synthetic ``"all"`` key excluded. Page counts are
+    read from each per-source BM25 retriever's ``docs`` list (already in
+    memory from startup) by counting distinct ``metadata['page']`` values.
+    No extra Qdrant calls needed.
+
+    Returns ``(documents, total_pages)``. Each document is a dict with
+    ``name`` (str) and optionally ``pages`` (int). Returns ``([], 0)``
+    if nothing is found — the sidebar renders a quiet empty placeholder.
+    """
+    bm25 = getattr(pipeline, "bm25_by_source", None)
+    if not isinstance(bm25, dict):
+        return [], 0
+
+    names = sorted(k for k in bm25.keys() if k and k != "all")
+    if not names:
+        return [], 0
+
+    normalized: "list[dict]" = []
+    total_pages = 0
+    for name in names:
+        retriever = bm25.get(name)
+        page_count = None
+        docs = getattr(retriever, "docs", None)
+        if isinstance(docs, list):
+            pages = {
+                d.metadata.get("page")
+                for d in docs
+                if d.metadata.get("page") is not None
+            }
+            page_count = len(pages) or None
+        normalized.append({"name": name, "pages": page_count})
+        if page_count:
+            total_pages += page_count
+    return normalized, total_pages
+
+
 def render_sidebar(pipeline: RAGPipeline) -> None:
     with st.sidebar:
         st.markdown(
@@ -422,6 +539,60 @@ def render_sidebar(pipeline: RAGPipeline) -> None:
             reset_conversation(pipeline)
             st.rerun()
 
+        # --- Library section --------------------------------------------------
+        # Surfaces what corpus the assistant is grounded in. The single
+        # biggest "what is this product?" signal in the whole UI — without
+        # it, a first-time user can't tell the app apart from generic chat.
+        docs, total_pages = _list_indexed_documents(pipeline)
+        if docs:
+            doc_count = len(docs)
+            doc_noun = "document" if doc_count == 1 else "documents"
+            page_meta = f" · {total_pages:,} pages" if total_pages else ""
+            items_html: "list[str]" = []
+            for d in docs[:40]:  # cap so a huge corpus doesn't fill the sidebar
+                safe_name = html.escape(d["name"])
+                pages = d.get("pages")
+                meta_html = (
+                    f"<span class='lib-meta'>{pages} pp.</span>"
+                    if isinstance(pages, int)
+                    else ""
+                )
+                items_html.append(
+                    f"<li class='lib-doc' title='{safe_name}'>"
+                    f"<span class='lib-name'>{safe_name}</span>{meta_html}</li>"
+                )
+            overflow_html = (
+                f"<li class='lib-more'>+ {len(docs) - 40} more</li>"
+                if len(docs) > 40
+                else ""
+            )
+            st.markdown(
+                "<div class='library'>"
+                "<div class='lib-head'>"
+                "<span class='lib-label'>Library</span>"
+                f"<span class='lib-count'>{doc_count} {doc_noun}{page_meta}</span>"
+                "</div>"
+                f"<ul class='lib-list'>{''.join(items_html)}{overflow_html}</ul>"
+                "</div>",
+                unsafe_allow_html=True,
+            )
+        else:
+            # Quiet placeholder — nothing detected but the section is still
+            # visible so it's obvious what *would* live here once wired.
+            st.markdown(
+                "<div class='library library--empty'>"
+                "<div class='lib-head'>"
+                "<span class='lib-label'>Library</span>"
+                "<span class='lib-count'>No documents detected</span>"
+                "</div>"
+                "<div class='lib-empty-note'>"
+                "Add documents to your index, then reload — they\u2019ll "
+                "appear here automatically."
+                "</div>"
+                "</div>",
+                unsafe_allow_html=True,
+            )
+
 
 def render_empty_state() -> None:
     st.markdown(
@@ -429,8 +600,7 @@ def render_empty_state() -> None:
         "<div class='eyebrow'>Ready when you are</div>"
         "<div class='welcome-title'>What would you like to know?</div>"
         "<div class='welcome-sub'>"
-        "Ask anything about your documents. Follow-up questions keep the "
-        "conversation in context."
+        "Ask anything about your documents."
         "</div>"
         "</div>",
         unsafe_allow_html=True,
@@ -551,12 +721,21 @@ def main() -> None:
 
     render_sidebar(pipeline)
 
-    if not st.session_state.messages:
+    # Read the prompt FIRST so we can decide which view to render. Without
+    # this, on the rerun where the very first question is submitted, the
+    # script sees `messages` still empty at the if-check below and renders
+    # the welcome state — then handle_user_input() appends + renders the
+    # user/assistant turns *underneath*, leaving the welcome stranded
+    # above an active conversation. By reading prompt up front, we know to
+    # skip the welcome on that rerun.
+    prompt = st.chat_input("Ask a question…")
+
+    if not st.session_state.messages and not prompt:
         render_empty_state()
     else:
         render_history()
 
-    if prompt := st.chat_input("Ask a question…"):
+    if prompt:
         handle_user_input(pipeline, prompt)
 
 

@@ -1,0 +1,158 @@
+/* ============================================================
+   Sidebar
+   ============================================================ */
+[data-testid="stSidebar"] {
+  background: var(--paper-2);
+  border-right: 1px solid var(--rule);
+}
+[data-testid="stSidebar"] .block-container {
+  padding-top: 2.5rem;
+  padding-bottom: 2rem;
+}
+
+.sidebar-brand {
+  font-family: var(--serif);
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  margin-bottom: 0.4rem;
+}
+.sidebar-sub {
+  font-size: 0.82rem;
+  color: var(--ink-muted);
+  line-height: 1.55;
+  margin-bottom: 1.5rem;
+}
+.sidebar-rule {
+  height: 1px;
+  background: var(--rule);
+  margin: 0.25rem 0 1.25rem;
+}
+
+[data-testid="stSidebar"] .stButton > button {
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  font-size: 0.88rem;
+  padding: 0.55rem 0.9rem;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    box-shadow 160ms ease;
+  box-shadow: none;
+}
+[data-testid="stSidebar"] .stButton > button:hover {
+  border-color: var(--rule-strong);
+  background: var(--paper-3);
+  color: var(--ink);
+}
+[data-testid="stSidebar"] .stButton > button:focus,
+[data-testid="stSidebar"] .stButton > button:active {
+  border-color: var(--ink-muted) !important;
+  background: var(--paper-3) !important;
+  color: var(--ink) !important;
+  box-shadow: 0 0 0 3px var(--focus-halo) !important;
+  outline: none !important;
+}
+
+/* ============================================================
+   LIBRARY — makes the indexed corpus visible. Without this
+   section, a first-time user has no idea what makes this product
+   different from a generic chat tool.
+   ============================================================ */
+.library {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--rule);
+}
+.lib-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  margin-bottom: 0.55rem;
+}
+.lib-label {
+  font-family: var(--sans);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.lib-count {
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  color: var(--ink-muted);
+  letter-spacing: -0.005em;
+}
+.lib-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+.lib-doc {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.3rem 0.45rem;
+  border-radius: 5px;
+  font-family: var(--sans);
+  font-size: 0.76rem;
+  color: var(--ink-soft);
+  line-height: 1.3;
+  cursor: default;
+  transition: background 140ms ease, color 140ms ease;
+}
+.lib-doc::before {
+  content: "▭";
+  color: var(--ink-faint);
+  font-size: 0.8em;
+  flex: none;
+}
+.lib-doc:hover {
+  background: var(--paper-3);
+  color: var(--ink);
+}
+.lib-name {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lib-meta {
+  flex: none;
+  font-family: "SF Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.66rem;
+  color: var(--ink-faint);
+  letter-spacing: 0.01em;
+}
+.lib-more {
+  font-family: var(--sans);
+  font-size: 0.7rem;
+  color: var(--ink-faint);
+  padding: 0.3rem 0.45rem;
+  font-style: italic;
+}
+.library--empty .lib-empty-note {
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  color: var(--ink-faint);
+  line-height: 1.55;
+  margin-top: 0.4rem;
+}
+.library--empty .lib-empty-note code {
+  background: var(--paper-3);
+  color: var(--ink-soft);
+  padding: 0.05rem 0.3rem;
+  border-radius: 4px;
+  font-size: 0.85em;
+}

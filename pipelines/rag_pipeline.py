@@ -115,6 +115,10 @@ class RAGPipeline:
         # 10. Save the turn for future follow-ups.
         self.memory.add(query, "".join(collected))
 
+    def reset(self) -> None:
+        """Clear conversation memory for a fresh session."""
+        self.memory.clear()
+
     def last_sources(self) -> list[tuple[str, int | str, str | None]]:
         """
         Unique (source, page, section) tuples from the most recent

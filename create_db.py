@@ -2,8 +2,9 @@
 # Database creation entrypoint.
 # Run once after dropping new PDFs in.
 # =============================================================
+from pathlib import Path
 from dotenv import load_dotenv
-load_dotenv()
+load_dotenv(Path(__file__).parent / ".env")
 
 from pipelines.ingestion_pipeline import run_ingestion
 from config.settings import settings

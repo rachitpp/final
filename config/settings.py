@@ -36,7 +36,7 @@ class Settings:
     llm_max_tokens: int = 2048
 
     # --- Vector store (Qdrant Cloud) ---
-    qdrant_url: str = field(default_factory=lambda: os.environ.get("CLUSTER_ENDPOINT", "https://your-cluster-url.qdrant.io"))
+    qdrant_url: str = field(default_factory=lambda: os.environ.get("CLUSTER_ENDPOINT", ""))
     qdrant_collection: str = "rag_documents"
     qdrant_summary_collection: str = "rag_document_summaries"
     qdrant_vector_size: int = 768          # text-embedding-004 -> 768 dims
@@ -66,6 +66,14 @@ class Settings:
 
     # --- Logging ---
     log_level: str = "INFO"
+
+
+    def __post_init__(self) -> None:
+        if not self.qdrant_url:
+            raise EnvironmentError(
+                "CLUSTER_ENDPOINT environment variable is not set. "
+                "Set it to your Qdrant Cloud cluster URL before running the app."
+            )
 
 
 settings = Settings()

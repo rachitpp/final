@@ -1,0 +1,184 @@
+/* ============================================================
+   Chat input — Midnight v2: flat gray pill, no border-gradient
+   ============================================================ */
+[data-testid="stChatInput"] {
+  background: transparent;
+}
+
+[data-testid="stChatInput"] > div {
+  box-sizing: border-box !important;
+  display: flex !important;
+  align-items: center !important;
+  background: var(--paper-4) !important;
+  /* Subtle 1px hairline border + warm inner highlight so the composer
+     reads as a tangible surface lifted off the canvas. */
+  border: 1px solid var(--rule-strong) !important;
+  border-radius: 24px !important;
+  padding: 0.35rem 0.55rem !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 1px 2px rgba(0, 0, 0, 0.25),
+    0 8px 24px -10px rgba(0, 0, 0, 0.35) !important;
+  transition:
+    border-color 200ms ease,
+    background 200ms ease,
+    box-shadow 220ms ease;
+}
+[data-testid="stChatInput"] > div:hover {
+  background: var(--paper-5) !important;
+  border-color: #5a5a5a !important;
+}
+[data-testid="stChatInput"] > div:focus-within {
+  background: var(--paper-4) !important;
+  border-color: var(--accent-border) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 0 0 3px var(--focus-halo),
+    0 6px 16px -6px rgba(0, 0, 0, 0.5) !important;
+  outline: none !important;
+}
+
+[data-testid="stChatInput"] [data-baseweb="textarea"],
+[data-testid="stChatInput"] [data-baseweb="base-input"],
+[data-testid="stChatInput"] [data-baseweb="textarea"] > div,
+[data-testid="stChatInput"] [data-baseweb="base-input"] > div {
+  box-sizing: border-box !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  min-height: 0 !important;
+  align-items: center !important;
+}
+
+[data-testid="stChatInput"] textarea {
+  box-sizing: border-box !important;
+  background: transparent !important;
+  color: var(--ink) !important;
+  font-family: var(--sans) !important;
+  font-size: 1rem !important;
+  line-height: 1.5 !important;
+  padding: 0.5rem 0.5rem !important;
+  min-height: 2.5rem !important;
+  max-height: 9rem !important;
+  caret-color: var(--ink);
+}
+[data-testid="stChatInput"] textarea::placeholder {
+  color: var(--ink-faint) !important;
+}
+[data-testid="stChatInput"] textarea:focus {
+  box-shadow: none !important;
+  outline: none !important;
+  border: none !important;
+}
+
+/* Send button — white circle, dark icon, ChatGPT-style */
+[data-testid="stChatInput"] button {
+  color: #171717 !important;
+  background: #ffffff !important;
+  border-radius: 50% !important;
+  width: 2rem !important;
+  height: 2rem !important;
+  margin: 0.15rem 0.1rem !important;
+  box-shadow: none !important;
+  transition:
+    transform 160ms ease,
+    background 160ms ease,
+    opacity 160ms ease;
+  opacity: 1;
+}
+[data-testid="stChatInput"] button:hover {
+  background: #e8e8e8 !important;
+  transform: none;
+}
+[data-testid="stChatInput"] button:active {
+  transform: scale(0.96);
+}
+[data-testid="stChatInput"] button svg {
+  fill: #171717;
+}
+/* Disabled state (empty input) — dim the white button */
+[data-testid="stChatInput"] button:disabled {
+  background: #4a4a4a !important;
+  opacity: 1;
+}
+[data-testid="stChatInput"] button:disabled svg { fill: #8e8e8e; }
+
+/* ============================================================
+   Bottom bar — paper color, no border, fade matches dark paper
+   ============================================================ */
+[data-testid="stBottom"],
+[data-testid="stBottom"] > div,
+[data-testid="stBottom"] > div > div,
+[data-testid="stBottomBlockContainer"],
+.stChatFloatingInputContainer,
+.stChatFloatingInputContainer > div,
+.stChatFloatingInputContainer > div > div {
+  background: var(--paper) !important;
+  background-color: var(--paper) !important;
+  border-top: none !important;
+  box-shadow: none !important;
+}
+
+[data-testid="stBottomBlockContainer"] {
+  max-width: 740px !important;
+}
+[data-testid="stBottom"]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -2.75rem;
+  height: 2.75rem;
+  background: linear-gradient(
+    to top,
+    var(--paper) 20%,
+    rgba(33, 33, 33, 0) 100%
+  );
+  pointer-events: none;
+}
+
+/* ============================================================
+   Jump-to-latest button
+   ============================================================ */
+.jump-latest {
+  position: fixed;
+  left: 50%;
+  transform: translate(-50%, 6px);
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--rule-strong);
+  border-radius: 50%;
+  background: var(--paper-4);
+  color: var(--ink-soft);
+  cursor: pointer;
+  z-index: 60;
+  opacity: 0;
+  pointer-events: none;
+  box-shadow:
+    0 2px 6px -1px rgba(0, 0, 0, 0.4),
+    0 8px 20px -6px rgba(0, 0, 0, 0.55);
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease,
+    color 140ms ease,
+    border-color 140ms ease;
+}
+.jump-latest.is-visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  pointer-events: auto;
+}
+.jump-latest:hover {
+  color: var(--ink);
+  border-color: var(--ink-muted);
+}
+.jump-latest:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 3px var(--focus-halo),
+    0 2px 6px -1px rgba(0, 0, 0, 0.4);
+}

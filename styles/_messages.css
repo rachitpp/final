@@ -1,0 +1,336 @@
+/* ============================================================
+   User message — Midnight v2: rounded gray pill, no border,
+   wider, ChatGPT-style
+   ============================================================ */
+.user-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  width: 100%;
+  margin: 0.6rem 0 0.4rem;
+}
+.user-row .user-bubble {
+  animation: user-in 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes user-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.user-label {
+  font-family: var(--sans);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--ink-soft);
+  margin-bottom: 0.35rem;
+}
+.user-bubble {
+  background: var(--paper-4);
+  border: none;
+  border-radius: 20px;
+  padding: 0.65rem 1.05rem;
+  max-width: 70%;
+  width: fit-content;
+  font-family: var(--sans);
+  font-size: 0.95rem;
+  font-weight: 400;
+  letter-spacing: -0.005em;
+  color: var(--ink);
+  line-height: 1.5;
+  text-align: left;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+  box-shadow: none;
+}
+
+/* ============================================================
+   Chat messages — assistant
+   ============================================================ */
+[data-testid="stChatMessage"] {
+  display: flex;
+  flex-direction: column;
+  padding: 0.6rem 0;
+  border: none;
+  background: transparent;
+  gap: 0.28rem;
+  padding-left: 0 !important;
+}
+[data-testid="stChatMessageContent"] {
+  line-height: 1.78;
+  font-size: 1.06rem;
+  color: var(--ink);
+  margin-left: 0 !important;
+}
+[data-testid="stChatMessageContent"] p {
+  margin-bottom: 0.65rem;
+  color: var(--ink);
+}
+/* Editorial lede — the first paragraph of every assistant answer reads
+   a touch larger, brighter, and tighter than the body. Gives each turn
+   a typographic anchor instead of a uniform wall of text. */
+[data-testid="stChatMessageContent"] [data-testid="stMarkdownContainer"] > p:first-child,
+[data-testid="stChatMessageContent"] > div > [data-testid="stMarkdownContainer"] > p:first-child,
+[data-testid="stChatMessageContent"] > [data-testid="stMarkdownContainer"] > p:first-child {
+  font-size: 1.13rem;
+  line-height: 1.68;
+  letter-spacing: -0.008em;
+  color: #ffffff;
+  font-weight: 400;
+  margin-bottom: 0.95rem;
+}
+[data-testid="stChatMessageContent"] strong {
+  color: var(--ink);
+}
+[data-testid="stChatMessageContent"] code {
+  background: var(--paper-4);
+  color: var(--ink);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  font-size: 0.92em;
+}
+
+/* Citation chips — near-monochrome, subtle blue-gray tint */
+[data-testid="stChatMessageContent"] .cite {
+  display: inline-block;
+  font-family:
+    "SF Mono", ui-monospace, SFMono-Regular, Menlo, "Cascadia Code", monospace;
+  font-size: 0.72em;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  line-height: 1.4;
+  color: var(--accent);
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-border);
+  border-radius: 7px;
+  padding: 0.08em 0.5em;
+  margin: 0 0.05em;
+  white-space: nowrap;
+  vertical-align: 1px;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    background 140ms ease,
+    color 140ms ease,
+    border-color 140ms ease;
+}
+[data-testid="stChatMessageContent"] .cite:hover {
+  background: rgba(194, 209, 221, 0.14);
+  border-color: rgba(194, 209, 221, 0.35);
+  color: #ffffff;
+}
+[data-testid="stChatMessageContent"] .cite:focus-visible {
+  outline: none;
+  background: rgba(194, 209, 221, 0.18);
+  border-color: var(--accent);
+  color: #ffffff;
+  box-shadow: 0 0 0 3px var(--focus-halo);
+}
+[data-testid="stChatMessageContent"] .cite:active {
+  transform: translateY(1px);
+}
+[data-testid="stChatMessageContent"] a {
+  color: var(--accent) !important;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--accent-border);
+  transition:
+    color 140ms ease,
+    text-decoration-color 140ms ease;
+}
+[data-testid="stChatMessageContent"] a:hover {
+  color: #ffffff !important;
+  text-decoration-color: var(--accent);
+}
+
+/* ============================================================
+   Sources disclosure
+   ============================================================ */
+.sources {
+  margin-top: 1.5rem;
+}
+.sources-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  font-family: var(--sans);
+  font-size: 0.75rem;
+  color: var(--ink-faint);
+  background: none;
+  border: none;
+  padding: 0;
+  user-select: none;
+  transition: color 140ms ease;
+}
+.sources-toggle:hover {
+  color: var(--ink-muted);
+}
+.sources-toggle .chev {
+  font-size: 0.6rem;
+  opacity: 0.7;
+  transition: transform 420ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.sources.open .sources-toggle .chev {
+  transform: rotate(90deg);
+}
+.sources-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-6px);
+  overflow: hidden;
+  transition:
+    max-height 720ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 600ms ease,
+    transform 720ms cubic-bezier(0.16, 1, 0.3, 1),
+    margin-top 720ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.sources.open .sources-list {
+  max-height: 40rem;
+  opacity: 1;
+  transform: translateY(0);
+  margin-top: 0.7rem;
+}
+.source-item {
+  opacity: 0;
+  transform: translateY(-5px);
+  transition:
+    opacity 520ms ease,
+    transform 520ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.sources.open .source-item {
+  opacity: 1;
+  transform: translateY(0);
+}
+.sources.open .source-item:nth-child(1) { transition-delay: 120ms; }
+.sources.open .source-item:nth-child(2) { transition-delay: 200ms; }
+.sources.open .source-item:nth-child(3) { transition-delay: 280ms; }
+.sources.open .source-item:nth-child(4) { transition-delay: 360ms; }
+.sources.open .source-item:nth-child(n + 5) { transition-delay: 430ms; }
+.source-item {
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  color: var(--ink-muted);
+  padding: 0.28rem 0 0.28rem 0.9rem;
+  line-height: 1.5;
+}
+.source-item .nm { color: var(--ink-soft); }
+.source-item .pg {
+  color: var(--ink-faint);
+  font-family: "SF Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.92em;
+}
+
+/* Source-list row pulse — lights up briefly when the matching
+   citation chip is clicked, guiding the eye from the inline
+   citation to the actual source entry. */
+@keyframes source-pulse {
+  0%   { background: transparent; box-shadow: inset 2px 0 0 transparent; }
+  18%  { background: var(--accent-bg); box-shadow: inset 2px 0 0 var(--accent); }
+  60%  { background: var(--accent-bg); box-shadow: inset 2px 0 0 var(--accent); }
+  100% { background: transparent; box-shadow: inset 2px 0 0 transparent; }
+}
+.source-item.is-pulsing {
+  border-radius: 6px;
+  animation: source-pulse 1.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.source-item.is-pulsing .nm { color: var(--ink); }
+
+@keyframes msg-in {
+  from { opacity: 0; transform: translateY(7px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+[data-testid="stChatMessage"]:last-of-type {
+  animation: msg-in 480ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Hide default avatars */
+[data-testid="stChatMessage"] [data-testid="stChatMessageAvatarUser"],
+[data-testid="stChatMessage"] [data-testid="stChatMessageAvatarAssistant"],
+[data-testid="stChatMessage"] [data-testid="chatAvatarIcon-user"],
+[data-testid="stChatMessage"] [data-testid="chatAvatarIcon-assistant"],
+[data-testid="stChatMessage"] > img:first-child,
+[data-testid="stChatMessage"] > div:first-child:has(svg) {
+  display: none !important;
+}
+
+/* Assistant message — left-aligned, full-width content.
+   Divider lifted to --rule-strong so the boundary between user
+   message and assistant answer is actually visible on dark gray. */
+[data-testid="stChatMessage"] {
+  align-items: flex-start;
+  padding: 1rem 0 0.6rem !important;
+  border-top: 1px solid var(--rule-strong);
+  margin-top: 0.4rem;
+}
+[data-testid="stChatMessage"]::before {
+  content: "◐  Assistant";
+  font-family: var(--sans);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--ink-soft);
+  margin-bottom: 0.35rem;
+}
+[data-testid="stChatMessage"] [data-testid="stChatMessageContent"] {
+  font-size: 1.06rem !important;
+  line-height: 1.78 !important;
+  max-width: 100%;
+}
+
+/* ============================================================
+   Assistant answer actions — copy button
+   ============================================================ */
+.msg-actions {
+  margin-top: 0.85rem;
+  display: flex;
+  gap: 0.4rem;
+}
+.copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.6rem;
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  line-height: 1;
+  color: var(--ink-muted);
+  background: transparent;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity 160ms ease,
+    color 140ms ease,
+    border-color 140ms ease,
+    background 140ms ease;
+}
+[data-testid="stChatMessage"]:hover .copy-btn,
+.copy-btn:focus-visible,
+.copy-btn.copied {
+  opacity: 1;
+}
+.copy-btn:hover {
+  color: var(--ink);
+  border-color: #5a5a5a;
+  background: var(--paper-3);
+}
+.copy-btn:focus-visible {
+  outline: none;
+  border-color: var(--ink-muted);
+  box-shadow: 0 0 0 3px var(--focus-halo);
+}
+.copy-btn.copied {
+  color: var(--ink);
+  border-color: #5a5a5a;
+}
+.copy-btn svg { flex: none; }
+@media (hover: none) {
+  .copy-btn { opacity: 1; }
+}

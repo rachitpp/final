@@ -1,0 +1,59 @@
+/* ============================================================
+   Responsive — collapse extra padding on small screens
+   ============================================================ */
+@media (max-width: 640px) {
+  .block-container {
+    padding-top: 1.5rem;
+    padding-bottom: 7rem;
+  }
+  .welcome-wrap { padding: 2rem 0 1rem; }
+  .welcome-title { font-size: 2rem; }
+  .welcome-sub { font-size: 1rem; }
+  .user-bubble { max-width: 85%; }
+  .stApp::after {
+    font-size: 13rem;
+    right: -1.5rem;
+    bottom: -2rem;
+  }
+}
+
+/* ============================================================
+   Accessibility — honor reduced-motion preferences
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  .eyebrow,
+  .welcome-title,
+  .welcome-sub,
+  .user-row .user-bubble,
+  [data-testid="stChatMessage"]:last-of-type,
+  .error-note {
+    animation: none !important;
+  }
+  .thinking-stages .stage { animation: none !important; }
+  .thinking-stages .stage-4 {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  [data-testid="stChatInput"] > div,
+  [data-testid="stSidebar"] .stButton > button,
+  [data-testid="stChatInput"] button,
+  .jump-latest,
+  .copy-btn,
+  .sources-list,
+  .sources-toggle .chev,
+  .source-item {
+    transition: none !important;
+  }
+  .source-item { transform: none !important; }
+  .sources.open .source-item {
+    opacity: 1 !important;
+    transition-delay: 0ms !important;
+  }
+  .source-item.is-pulsing {
+    animation: none !important;
+    background: var(--accent-bg);
+    box-shadow: inset 2px 0 0 var(--accent);
+  }
+  .starter-grid { animation: none !important; }
+  .starter { transition: none !important; transform: none !important; }
+}

@@ -1,0 +1,40 @@
+/* ============================================================
+   Tokens — Midnight v2 palette
+   Cool neutral grays, near-monochrome. ChatGPT-style dark mode
+   with our serif typography and ◐ brand mark preserved.
+   ============================================================ */
+:root {
+  --ink: #ececec;            /* primary text — near-white, neutral */
+  --ink-soft: #d1d1d1;       /* secondary */
+  --ink-muted: #b4b4b4;      /* tertiary / helper */
+  --ink-faint: #8e8e8e;      /* placeholder, eyebrow */
+
+  --paper: #212121;          /* main canvas */
+  --paper-2: #171717;        /* sidebar — slightly darker */
+  --paper-3: #2a2a2a;        /* hover */
+  --paper-4: #2f2f2f;        /* raised surfaces — user bubble, composer */
+  --paper-5: #404040;        /* hover on raised */
+
+  --rule: #2a2a2a;           /* hairlines */
+  --rule-strong: #3a3a3a;
+
+  /* Near-monochrome — barely-blue tint for citations only. Almost neutral. */
+  --accent: #c2d1dd;
+  --accent-strong: #ffffff;
+  --accent-bg: rgba(194, 209, 221, 0.08);
+  --accent-border: rgba(194, 209, 221, 0.22);
+
+  --focus: #ffffff;
+  --focus-halo: rgba(255, 255, 255, 0.15);
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+
+  --serif:
+    "Charter", "Iowan Old Style", "Source Serif Pro", Georgia,
+    "Times New Roman", serif;
+  --sans:
+    -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
+}

@@ -1,0 +1,182 @@
+/* ============================================================
+   Hide Streamlit chrome
+   ============================================================ */
+#MainMenu,
+footer,
+[data-testid="stDecoration"],
+[data-testid="stHeader"] .stDeployButton,
+[data-testid="stStatusWidget"],
+[data-testid="stToolbarActions"],
+[data-testid="stMainMenu"] {
+  display: none !important;
+}
+[data-testid="stToolbar"] {
+  background: transparent !important;
+  pointer-events: none !important;
+}
+[data-testid="stHeader"] {
+  background: transparent;
+  height: 0;
+  pointer-events: none;
+  overflow: visible !important;
+}
+
+/* ----------------------------------------------------------
+   Sidebar EXPAND control (visible when sidebar is collapsed).
+   Pinned to the viewport so the zero-height header can't clip it.
+   Treated as a peer of the collapse button: subtle dark surface
+   with a hairline border that sits comfortably on the canvas,
+   not a billboard-white block. Hover nudges the glyph right to
+   hint at the open direction.
+   ---------------------------------------------------------- */
+[data-testid="stExpandSidebar"],
+[data-testid="stExpandSidebarButton"],
+[data-testid="stSidebarCollapsedControl"],
+[data-testid="collapsedControl"] {
+  pointer-events: auto !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  width: 2rem !important;
+  height: 2rem !important;
+  min-width: 2rem !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  color: var(--ink-soft) !important;
+  background: var(--paper-4) !important;
+  border: 1px solid var(--rule-strong) !important;
+  border-radius: 8px !important;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.3),
+    0 4px 12px -4px rgba(0, 0, 0, 0.4) !important;
+  position: fixed !important;
+  top: 0.7rem !important;
+  left: 0.7rem !important;
+  z-index: 1000 !important;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    transform 200ms cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+[data-testid="stExpandSidebar"]:hover,
+[data-testid="stExpandSidebarButton"]:hover,
+[data-testid="stSidebarCollapsedControl"]:hover,
+[data-testid="collapsedControl"]:hover {
+  background: var(--paper-5) !important;
+  border-color: #5a5a5a !important;
+  color: var(--ink) !important;
+}
+[data-testid="stExpandSidebar"]:focus-visible,
+[data-testid="stExpandSidebarButton"]:focus-visible {
+  outline: none !important;
+  border-color: var(--ink-muted) !important;
+  box-shadow: 0 0 0 3px var(--focus-halo) !important;
+}
+[data-testid="stExpandSidebarButton"] svg,
+[data-testid="stExpandSidebar"] svg {
+  width: 1.05rem !important;
+  height: 1.05rem !important;
+  fill: var(--ink-soft) !important;
+  color: var(--ink-soft) !important;
+  transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1), color 160ms ease !important;
+}
+[data-testid="stExpandSidebarButton"]:hover svg,
+[data-testid="stExpandSidebar"]:hover svg {
+  fill: var(--ink) !important;
+  color: var(--ink) !important;
+  transform: translateX(1px);
+}
+[data-testid="stExpandSidebarButton"] span,
+[data-testid="stExpandSidebarButton"] .stIconMaterial,
+[data-testid="stExpandSidebarButton"] [data-testid="stIconMaterial"] {
+  font-family:
+    "Material Symbols Rounded", "Material Symbols Outlined", "Material Icons" !important;
+  font-size: 1.2rem !important;
+  line-height: 1 !important;
+  color: var(--ink-soft) !important;
+  transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1), color 160ms ease !important;
+}
+[data-testid="stExpandSidebarButton"]:hover span,
+[data-testid="stExpandSidebarButton"]:hover .stIconMaterial {
+  color: var(--ink) !important;
+  transform: translateX(1px);
+}
+
+/* ----------------------------------------------------------
+   Sidebar COLLAPSE control (visible when sidebar is open — lives
+   inside the sidebar header). Refined as a real interactive
+   affordance instead of the camouflaged Streamlit default:
+   slight inset, a discoverable hover, and a smooth icon shift.
+   ---------------------------------------------------------- */
+[data-testid="stSidebarCollapseButton"],
+[data-testid="stSidebarCollapseButton"] button,
+[data-testid="baseButton-headerNoPadding"],
+[data-testid="stSidebarHeader"] button {
+  color: var(--ink-soft) !important;
+  background: transparent !important;
+  border: 1px solid var(--rule-strong) !important;
+  border-radius: 8px !important;
+  width: 2rem !important;
+  height: 2rem !important;
+  min-width: 2rem !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition:
+    background 160ms ease,
+    color 160ms ease,
+    border-color 160ms ease,
+    transform 200ms cubic-bezier(0.22, 1, 0.36, 1) !important;
+  opacity: 1 !important;
+  box-shadow: none !important;
+}
+[data-testid="stSidebarCollapseButton"]:hover,
+[data-testid="stSidebarCollapseButton"] button:hover,
+[data-testid="baseButton-headerNoPadding"]:hover,
+[data-testid="stSidebarHeader"] button:hover {
+  color: var(--ink) !important;
+  background: var(--paper-4) !important;
+  border-color: #5a5a5a !important;
+}
+/* Smoothly nudge the glyph in the close direction on hover. */
+[data-testid="stSidebarCollapseButton"]:hover svg,
+[data-testid="stSidebarHeader"] button:hover svg,
+[data-testid="stSidebarCollapseButton"]:hover span,
+[data-testid="stSidebarHeader"] button:hover span {
+  transform: translateX(-1px);
+}
+[data-testid="stSidebarCollapseButton"] svg,
+[data-testid="stSidebarHeader"] button svg {
+  width: 1.05rem !important;
+  height: 1.05rem !important;
+  fill: var(--ink-soft) !important;
+  color: var(--ink-soft) !important;
+  transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1), color 160ms ease !important;
+}
+[data-testid="stSidebarCollapseButton"]:hover svg,
+[data-testid="stSidebarHeader"] button:hover svg {
+  fill: var(--ink) !important;
+  color: var(--ink) !important;
+}
+[data-testid="stSidebarCollapseButton"] span,
+[data-testid="stSidebarHeader"] button span {
+  font-family:
+    "Material Symbols Rounded", "Material Symbols Outlined", "Material Icons" !important;
+  font-size: 1.2rem !important;
+  color: var(--ink-soft) !important;
+  transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1), color 160ms ease !important;
+}
+[data-testid="stSidebarCollapseButton"]:hover span,
+[data-testid="stSidebarHeader"] button:hover span {
+  color: var(--ink) !important;
+}
+[data-testid="stSidebarCollapseButton"]:focus-visible,
+[data-testid="stSidebarHeader"] button:focus-visible {
+  outline: none !important;
+  border-color: var(--ink-muted) !important;
+  box-shadow: 0 0 0 3px var(--focus-halo) !important;
+}
