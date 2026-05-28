@@ -28,7 +28,10 @@ _llm = None
 def _llm_instance():
     global _llm
     if _llm is None:
-        _llm = get_llm(streaming=False, max_tokens=150)
+        # thinking_budget=0 disables Gemini 2.5 Flash's hidden thinking tokens,
+        # which would otherwise eat the max_output_tokens budget and truncate
+        # the visible variants mid-word.
+        _llm = get_llm(streaming=False, max_tokens=400, thinking_budget=0)
     return _llm
 
 

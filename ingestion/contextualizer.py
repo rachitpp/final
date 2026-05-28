@@ -22,7 +22,10 @@ def _ctx_llm():
     global _llm
     if _llm is None:
         # Short, deterministic output. ~3 sentences cap.
-        _llm = get_llm(streaming=False, max_tokens=160)
+        # thinking_budget=0: without it, Gemini 2.5 Flash spends ~140 of the
+        # 160-token budget on hidden thinking and emits 5-word truncated
+        # headers ("This table on page 1 of" with no rest of the sentence).
+        _llm = get_llm(streaming=False, max_tokens=160, thinking_budget=0)
     return _llm
 
 

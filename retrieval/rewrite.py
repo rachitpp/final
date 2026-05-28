@@ -13,7 +13,8 @@ _llm = None
 def _rewrite_llm():
     global _llm
     if _llm is None:
-        _llm = get_llm(streaming=False, max_tokens=128)
+        # thinking_budget=0: see note in retrieval/multi_query.py
+        _llm = get_llm(streaming=False, max_tokens=128, thinking_budget=0)
     return _llm
 
 

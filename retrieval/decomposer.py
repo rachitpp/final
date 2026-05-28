@@ -36,7 +36,8 @@ _llm = None
 def _decomposer_llm():
     global _llm
     if _llm is None:
-        _llm = get_llm(streaming=False, max_tokens=200)
+        # thinking_budget=0: see note in retrieval/multi_query.py
+        _llm = get_llm(streaming=False, max_tokens=400, thinking_budget=0)
     return _llm
 
 
@@ -53,6 +54,7 @@ def decompose_query(question: str) -> List[str]:
         output = _decomposer_llm().invoke(messages).content.strip()
         sub_queries = [line.strip() for line in output.splitlines() if line.strip()][:4]
         if len(sub_queries) <= 1:
+            logger.info("Decomposer returned single sub-query (treated atomic): %r", question)
             return [question]
         logger.info("Decomposed into %d sub-queries: %s", len(sub_queries), sub_queries)
         return sub_queries

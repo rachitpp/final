@@ -59,6 +59,16 @@ class Settings:
     # Keep low so multi-hop "intermediate" chunks (e.g. country→category lookups)
     # aren't filtered before the LLM can use them.
     rerank_score_threshold: float = 0.1
+    # Markdown table chunks score near-zero under MiniLM (web-search trained, it
+    # cannot read a pipe-delimited grid of category letters and dollar amounts as
+    # "relevant" to a prose question — observed scores ~0.003 even for the exactly
+    # correct rate table). Score-thresholding tables is therefore unsound and was
+    # silently dropping rate tables from multi-hop answers. Instead we bypass the
+    # threshold for tables and keep the top-N retrieved tables outright: a table is
+    # only ever a candidate because vector/BM25 retrieval already judged it relevant,
+    # and the cross-encoder still orders them well enough to surface the right one
+    # first. Keeps "rate-table + classification" questions from losing the numbers.
+    rerank_max_tables: int = 2
 
     # --- HYDE ---
     hyde_enabled: bool = True
