@@ -91,7 +91,7 @@ def build_bm25_retrievers(store: QdrantVectorStore) -> dict[str, BM25Retriever]:
     return retrievers
 
 
-def _dedupe(docs: List[Document]) -> List[Document]:
+def dedupe_docs(docs: List[Document]) -> List[Document]:
     """Drop duplicates by exact page_content, preserving order."""
     seen, out = set(), []
     for d in docs:
@@ -118,6 +118,6 @@ def hybrid_retrieve(
     bm25_docs = bm25_retriever.invoke(bm25_query)
     vec_docs = vector_retriever.invoke(vector_query)
     # logger.info(f"Retrieved BM25={len(bm25_docs)}, Vector={len(vec_docs)}")
-    merged = _dedupe(bm25_docs + vec_docs)
+    merged = dedupe_docs(bm25_docs + vec_docs)
     # logger.info(f"After dedupe: {len(merged)} candidate(s)")
     return merged
